@@ -209,7 +209,13 @@ $priceHistory->execute([$id]);
 $priceHistory = $priceHistory->fetchAll();
 $priceHistoryMax = $priceHistory ? max(array_column($priceHistory, 'price')) : 0;
 
-const PRICE_TYPE_LABELS = ['purchase' => 'Achat', 'manual_estimate' => 'Estimation manuelle', 'ai_estimate' => 'Estimation IA'];
+const PRICE_TYPE_LABELS = [
+    'purchase' => 'Achat',
+    'observed' => 'Prix relevé',
+    'open_prices' => 'Open Food Facts',
+    'manual_estimate' => 'Ancienne estimation',
+    'ai_estimate' => 'Ancienne estimation IA',
+];
 
 $status = drink_status($wine['drink_from_year'] !== null ? (int) $wine['drink_from_year'] : null, $wine['drink_until_year'] !== null ? (int) $wine['drink_until_year'] : null);
 
@@ -270,7 +276,7 @@ require __DIR__ . '/../includes/layout_header.php';
     </div>
     <div class="card stat-tile">
         <div class="value"><?= format_price($wine['current_estimated_price']) ?></div>
-        <div class="label">Prix estimé / bouteille</div>
+        <div class="label">Dernier prix relevé / bouteille</div>
     </div>
 </div>
 
@@ -336,19 +342,45 @@ require __DIR__ . '/../includes/layout_header.php';
             <p><?= nl2br(e($wine['notes'])) ?></p>
         <?php endif; ?>
 
-        <h3 style="margin-top:1.25rem;">Prix actuel</h3>
-        <form method="post" action="/pages/update_price.php" class="form-row" style="align-items:flex-end;">
+        <h3 style="margin-top:1.25rem;">Relever un prix</h3>
+        <p style="color:var(--text-muted); font-size:0.88rem; margin-top:-0.3rem;">
+            Saisis un prix vu en magasin ou sur Vivino, ou cherche un relevé partagé sur Open Food Facts.
+        </p>
+        <form method="post" action="/pages/update_price.php" style="max-width:520px;">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $id ?>">
-            <input type="hidden" name="source" value="manual">
-            <div class="field" style="flex:0 0 160px;">
-                <label>Nouveau prix (<?= e(currency_symbol()) ?>)</label>
-                <input type="number" step="0.01" name="price" value="<?= e((string) ($wine['current_estimated_price'] ?? '')) ?>">
+            <input type="hidden" name="source" value="observed">
+            <div class="form-row" style="align-items:flex-end;">
+                <div class="field" style="flex:0 0 150px;">
+                    <label>Prix (<?= e(currency_symbol()) ?>)</label>
+                    <input type="number" step="0.01" min="0" name="price" value="<?= e((string) ($wine['current_estimated_price'] ?? '')) ?>">
+                </div>
+                <div class="field" style="flex:1;">
+                    <label>Source (magasin, lien…)</label>
+                    <input type="text" name="note" maxlength="255" placeholder="Ex : Nicolas Lyon 6e / vivino.com">
+                </div>
+                <button type="submit" class="btn btn-sm"><?= icon('check', 15) ?> Enregistrer</button>
             </div>
-            <button type="submit" class="btn btn-sm"><?= icon('check', 15) ?> Enregistrer</button>
-            <button type="button" id="btn-estimate-price" class="btn btn-sm btn-accent" data-wine-id="<?= $id ?>">Estimation IA</button>
         </form>
-        <div id="price-estimate-status" class="ai-status"></div>
+
+        <?php if (!empty($wine['barcode'])): ?>
+            <button type="button" id="btn-open-prices" class="btn btn-sm" data-wine-id="<?= $id ?>" style="margin-top:0.4rem;">
+                <?= icon('search', 15) ?> Chercher un prix (Open Food Facts)
+            </button>
+            <div id="open-prices-status" class="ai-status"></div>
+            <div id="open-prices-results"></div>
+            <form method="post" action="/pages/update_price.php" id="accept-open-price-form" style="display:none;">
+                <?= csrf_field() ?>
+                <input type="hidden" name="id" value="<?= $id ?>">
+                <input type="hidden" name="source" value="open_prices">
+                <input type="hidden" name="price" id="accept-open-price">
+                <input type="hidden" name="note" id="accept-open-note">
+            </form>
+        <?php else: ?>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.5rem;">
+                Ajoute le code-barres du vin (via <a href="/pages/wine_form.php?id=<?= $id ?>">Modifier</a>) pour chercher un prix relevé sur Open Food Facts.
+            </p>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -357,9 +389,9 @@ require __DIR__ . '/../includes/layout_header.php';
     <h2>Historique des prix</h2>
     <?php foreach ($priceHistory as $p): ?>
         <div style="margin-bottom:0.7rem;">
-            <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:0.2rem;">
-                <span><?= e(date('d/m/Y', strtotime($p['recorded_at']))) ?> — <?= e(PRICE_TYPE_LABELS[$p['price_type']] ?? $p['price_type']) ?></span>
-                <span><?= format_price((float) $p['price']) ?></span>
+            <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:0.2rem; gap:0.6rem;">
+                <span><?= e(date('d/m/Y', strtotime($p['recorded_at']))) ?> — <?= e(PRICE_TYPE_LABELS[$p['price_type']] ?? $p['price_type']) ?><?php if (!empty($p['note'])): ?> <span style="color:var(--text-muted);">· <?= e($p['note']) ?></span><?php endif; ?></span>
+                <span style="white-space:nowrap;"><?= format_price((float) $p['price']) ?></span>
             </div>
             <div style="background:var(--bg-elevated); border-radius:4px; height:8px;">
                 <div style="background:<?= $p['price_type'] === 'purchase' ? 'var(--gold)' : 'var(--accent)' ?>; border-radius:4px; height:8px; width:<?= $priceHistoryMax > 0 ? (float) $p['price'] / $priceHistoryMax * 100 : 0 ?>%;"></div>

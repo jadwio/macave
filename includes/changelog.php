@@ -12,9 +12,21 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.7.1';
+const APP_VERSION = '2.8.0';
 
 const CHANGELOG = [
+    [
+        'version' => '2.8.0',
+        'date' => '2026-09-10',
+        'title' => 'Prix réels : fin de l\'estimation IA, Open Food Facts + saisie manuelle',
+        'items' => [
+            "L'estimation de prix par IA est retirée (fiche et formulaire) : trop approximative pour être fiable. L'historique garde les anciennes valeurs, simplement étiquetées « ancienne estimation ».",
+            "Nouveau : sur la fiche d'un vin, « Chercher un prix (Open Food Facts) » interroge la base contributive Open Prices par code-barres et propose les relevés trouvés (prix, magasin, date) à conserver en un clic.",
+            "Nouveau : saisie manuelle d'un prix relevé, avec une note libre (magasin, lien Vivino…). L'historique distingue prix d'achat / relevé manuel / Open Food Facts.",
+            "Un vin peut désormais enregistrer son code-barres (EAN), rempli automatiquement au scan à l'ajout ou saisi à la main.",
+            "La tâche IA « estimation de prix » disparaît des Paramètres (un modèle Gemini de moins à gérer).",
+        ],
+    ],
     [
         'version' => '2.7.1',
         'date' => '2026-09-10',

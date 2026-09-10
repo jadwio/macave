@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS wines (
     vintage INT NULL,
     alcohol_percent DECIMAL(4,1) NULL,
     volume_ml INT NOT NULL DEFAULT 750,
+    barcode VARCHAR(20) NULL,
     description TEXT NULL,
     food_pairing TEXT NULL,
     drink_from_year INT NULL,
@@ -102,7 +103,10 @@ CREATE TABLE IF NOT EXISTS price_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
     wine_id INT NOT NULL,
     price DECIMAL(10,2) NOT NULL,
-    price_type ENUM('purchase','manual_estimate','ai_estimate') NOT NULL,
+    -- purchase = prix d'achat ; observed = prix relevé à la main ;
+    -- open_prices = relevé Open Food Facts ; *_estimate = anciens (IA, dépréciés)
+    price_type ENUM('purchase','manual_estimate','ai_estimate','observed','open_prices') NOT NULL,
+    note VARCHAR(255) NULL,
     recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (wine_id) REFERENCES wines(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

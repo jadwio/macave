@@ -16,17 +16,6 @@ const WINE_ENRICH_SCHEMA = [
         'drink_until_year' => ['type' => 'integer'],
         'description' => ['type' => 'string'],
         'food_pairing' => ['type' => 'string'],
-        'estimated_price_eur' => ['type' => 'number'],
-    ],
-];
-
-const PRICE_ESTIMATE_SCHEMA = [
-    'type' => 'object',
-    'properties' => [
-        'low_estimate' => ['type' => 'number'],
-        'high_estimate' => ['type' => 'number'],
-        'currency' => ['type' => 'string'],
-        'reasoning' => ['type' => 'string'],
     ],
 ];
 
@@ -93,8 +82,7 @@ const GEMINI_TASKS = [
     'text' => ['Enrichissement depuis le nom', 'Recherche des caractéristiques d\'un vin à partir de son nom.'],
     'vision' => ['Analyse de photo d\'étiquette', 'Lecture de l\'étiquette et extraction des informations.'],
     'crop' => ['Recadrage automatique', 'Détection du cadre de l\'étiquette. Tâche mécanique : un modèle « Lite » suffit.'],
-    'price' => ['Estimation de prix', 'Estimation de la valeur marchande d\'une bouteille.'],
-    'summary' => ['Synthèse magasin', 'Fiche complète avant achat (prix, garde, dégustation). Tâche la plus exigeante.'],
+    'summary' => ['Synthèse magasin', 'Fiche complète avant achat (garde, dégustation, prix indicatif). Tâche la plus exigeante.'],
 ];
 
 /** Clé de réglage portant le modèle d'une tâche. */
@@ -168,8 +156,6 @@ function gemini_recommended_assignment(array $available, array $reserved = [], a
         // qualité de vision prime, d'où un Flash complet plutôt qu'un Lite.
         // L'alias « latest » garantit d'avoir toujours la meilleure vision du moment.
         'vision' => ['gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.7-flash'],
-        // Prix : donnée la plus volatile, on vise les connaissances les plus récentes.
-        'price' => ['gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-latest'],
         // Synthèse magasin : raisonnement le plus riche → un Flash *complet*
         // (jamais un « Lite »). On évite Pro : son quota gratuit est plus bas et
         // c'est la fonction utilisée en rayon, où une coupure serait pénalisante.
@@ -517,8 +503,6 @@ function enrich_wine_from_text(string $name, ?string $producer, ?string $vintage
         . "Si ce vin a une mention de classification/vieillissement propre à sa région (par exemple Crianza, Reserva, "
         . "Gran Reserva pour l'Espagne, Riserva pour l'Italie, ou toute autre mention équivalente), indique-la dans "
         . "classification ; sinon laisse ce champ vide.\n"
-        . "Donne aussi dans estimated_price_eur une estimation approximative du prix de vente actuel en euros pour une "
-        . "bouteille de 75cl (moyenne grossière basée sur tes connaissances générales du marché, pas une donnée temps réel). "
         . "producer, region, appellation, country et classification doivent être de courts identifiants (quelques mots au "
         . "maximum) : jamais de phrase, jamais d'hésitation ni de raisonnement — si le nom est ambigu, choisis silencieusement "
         . "l'interprétation la plus probable, ou laisse le champ vide. Réponds uniquement avec les champs du schéma JSON fourni.";
@@ -604,9 +588,7 @@ function enrich_wine_from_photo(string $base64Image, string $mimeType): array
         . 'laisse-le vide plutôt que d\'inventer. Si ce vin a une mention de classification/vieillissement propre à sa '
         . 'région (par exemple Crianza, Reserva, Gran Reserva pour l\'Espagne, Riserva pour l\'Italie, ou toute autre '
         . 'mention équivalente visible sur l\'étiquette), indique-la dans classification ; sinon laisse ce champ vide. '
-        . 'Donne aussi dans estimated_price_eur une estimation approximative du '
-        . 'prix de vente actuel en euros pour une bouteille de 75cl (moyenne grossière basée sur tes connaissances '
-        . 'générales du marché, pas une donnée temps réel). Réponds uniquement avec les champs du schéma JSON fourni.';
+        . 'Réponds uniquement avec les champs du schéma JSON fourni.';
 
     $parts = [
         ['text' => $prompt],
@@ -615,21 +597,6 @@ function enrich_wine_from_photo(string $base64Image, string $mimeType): array
 
     $result = gemini_call($parts, WINE_ENRICH_SCHEMA, 'vision');
     log_ai_enrichment(null, 'photo', $prompt, $result['raw'] ?? ($result['error'] ?? null));
-    return $result;
-}
-
-function estimate_wine_price(array $wine): array
-{
-    $prompt = "Tu es un expert en vin. Donne une estimation approximative (fourchette basse/haute, en euros) de la valeur "
-        . "marchande actuelle de ce vin d'occasion/collection, à partir de tes connaissances générales (pas de données temps réel). "
-        . "Précise dans 'reasoning' que c'est une estimation approximative.\n"
-        . "Nom: {$wine['name']}\n"
-        . "Producteur: " . ($wine['producer'] ?? 'inconnu') . "\n"
-        . "Région: " . ($wine['region'] ?? 'inconnue') . "\n"
-        . "Millésime: " . ($wine['vintage'] ?? 'inconnu') . "\n";
-
-    $result = gemini_call([['text' => $prompt]], PRICE_ESTIMATE_SCHEMA, 'price');
-    log_ai_enrichment($wine['id'] ?? null, 'price_estimate', $prompt, $result['raw'] ?? ($result['error'] ?? null));
     return $result;
 }
 

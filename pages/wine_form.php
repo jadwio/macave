@@ -69,7 +69,7 @@ function render_duplicate_prompt(PDO $db, array $duplicate, array $postData, ?st
     $locationId = $postData['storage_location_id'] ?? '';
 
     $carryFields = ['name', 'producer', 'region', 'appellation', 'classification', 'country', 'color', 'vintage', 'alcohol_percent',
-        'volume_ml', 'description', 'food_pairing', 'drink_from_year', 'drink_until_year', 'purchase_price',
+        'volume_ml', 'barcode', 'description', 'food_pairing', 'drink_from_year', 'drink_until_year', 'purchase_price',
         'purchase_date', 'current_estimated_price', 'notes', 'is_gift', 'gift_note', 'grape_varieties', 'storage_location_id', 'quantity'];
 
     $pageTitle = 'Vin déjà existant';
@@ -163,6 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'vintage' => $_POST['vintage'] !== '' ? (int) $_POST['vintage'] : null,
             'alcohol_percent' => $_POST['alcohol_percent'] !== '' ? (float) $_POST['alcohol_percent'] : null,
             'volume_ml' => $_POST['volume_ml'] !== '' ? (int) $_POST['volume_ml'] : 750,
+            'barcode' => preg_replace('/\D/', '', $_POST['barcode'] ?? '') ?: null,
             'description' => trim($_POST['description'] ?? '') ?: null,
             'food_pairing' => trim($_POST['food_pairing'] ?? '') ?: null,
             'drink_from_year' => $_POST['drink_from_year'] !== '' ? (int) $_POST['drink_from_year'] : null,
@@ -197,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($id) {
             $sql = 'UPDATE wines SET name=:name, producer=:producer, region=:region, appellation=:appellation, classification=:classification, country=:country,
-                    color=:color, vintage=:vintage, alcohol_percent=:alcohol_percent, volume_ml=:volume_ml, description=:description,
+                    color=:color, vintage=:vintage, alcohol_percent=:alcohol_percent, volume_ml=:volume_ml, barcode=:barcode, description=:description,
                     food_pairing=:food_pairing, drink_from_year=:drink_from_year, drink_until_year=:drink_until_year,
                     purchase_price=:purchase_price, purchase_date=:purchase_date, current_estimated_price=:current_estimated_price,
                     notes=:notes, is_gift=:is_gift, gift_note=:gift_note' . ($photoPath ? ', label_photo_path=:photo' : '') . ' WHERE id=:id';
@@ -209,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sync_grape_varieties($db, $id, $_POST['grape_varieties'] ?? '');
 
             if ($fields['current_estimated_price'] !== null) {
-                $db->prepare('INSERT INTO price_history (wine_id, price, price_type) VALUES (?, ?, "manual_estimate")')
+                $db->prepare('INSERT INTO price_history (wine_id, price, price_type) VALUES (?, ?, "observed")')
                     ->execute([$id, $fields['current_estimated_price']]);
             }
 
@@ -218,10 +219,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $fields['photo'] = $photoPath;
             $sql = 'INSERT INTO wines (name, producer, region, appellation, classification, country, color, vintage, alcohol_percent,
-                    volume_ml, description, food_pairing, drink_from_year, drink_until_year, purchase_price, purchase_date,
+                    volume_ml, barcode, description, food_pairing, drink_from_year, drink_until_year, purchase_price, purchase_date,
                     current_estimated_price, notes, is_gift, gift_note, label_photo_path)
                     VALUES (:name, :producer, :region, :appellation, :classification, :country, :color, :vintage, :alcohol_percent,
-                    :volume_ml, :description, :food_pairing, :drink_from_year, :drink_until_year, :purchase_price, :purchase_date,
+                    :volume_ml, :barcode, :description, :food_pairing, :drink_from_year, :drink_until_year, :purchase_price, :purchase_date,
                     :current_estimated_price, :notes, :is_gift, :gift_note, :photo)';
             $db->prepare($sql)->execute($fields);
             $newId = (int) $db->lastInsertId();
@@ -361,6 +362,11 @@ require __DIR__ . '/../includes/layout_header.php';
             <label for="volume_ml">Volume (ml)</label>
             <input type="number" id="volume_ml" name="volume_ml" value="<?= e((string) ($wine['volume_ml'] ?? 750)) ?>">
         </div>
+        <div class="field">
+            <label for="barcode">Code-barres (EAN)</label>
+            <input type="text" id="barcode" name="barcode" inputmode="numeric" value="<?= e((string) ($wine['barcode'] ?? '')) ?>"
+                   placeholder="Rempli au scan — sert à retrouver un prix">
+        </div>
     </div>
 
     <div class="form-row">
@@ -398,14 +404,12 @@ require __DIR__ . '/../includes/layout_header.php';
         </div>
     </div>
 
-    <div class="field" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <div class="field">
         <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0;">
             <input type="checkbox" id="is_gift" name="is_gift" value="1" <?= !empty($wine['is_gift']) ? 'checked' : '' ?>>
             Ce vin est un cadeau (prix d'achat inconnu)
         </label>
-        <button type="button" id="btn-estimate-price-form" class="btn btn-sm" data-wine-id="<?= $id ? (int) $id : '' ?>"><?= icon('search', 14) ?> Estimation IA</button>
     </div>
-    <div id="price-estimate-status-form" class="ai-status" style="margin-top:-0.7rem; margin-bottom:1.1rem; text-align:right;"></div>
     <div class="field" id="gift_note_field" style="<?= !empty($wine['is_gift']) ? '' : 'display:none;' ?>">
         <label for="gift_note">Occasion / offert par</label>
         <input type="text" id="gift_note" name="gift_note" value="<?= e($wine['gift_note'] ?? '') ?>" placeholder="Ex: anniversaire de Paul, offert par Marie">

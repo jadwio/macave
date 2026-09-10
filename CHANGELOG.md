@@ -10,6 +10,21 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.8.0] — 2026-09-10 — Prix réels : fin de l'estimation IA, Open Food Facts + saisie manuelle
+
+- L'estimation de prix par IA est retirée (fiche et formulaire) : trop
+  approximative pour être fiable. L'historique garde les anciennes valeurs,
+  étiquetées « ancienne estimation ».
+- Nouveau : sur la fiche d'un vin, « Chercher un prix (Open Food Facts) »
+  interroge la base contributive Open Prices par code-barres et propose les
+  relevés trouvés (prix, magasin, date) à conserver en un clic.
+- Nouveau : saisie manuelle d'un prix relevé, avec une note libre (magasin,
+  lien Vivino…). L'historique distingue prix d'achat / relevé manuel / Open
+  Food Facts.
+- Un vin peut désormais enregistrer son code-barres (EAN), rempli
+  automatiquement au scan à l'ajout ou saisi à la main.
+- La tâche IA « estimation de prix » disparaît des Paramètres.
+
 ## [2.7.1] — 2026-09-10 — Scan photo en magasin : fiabilité
 
 - La photo de l'étiquette est réduite (~1600 px) avant l'envoi : une image de

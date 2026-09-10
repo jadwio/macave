@@ -564,6 +564,8 @@
                     return;
                 }
                 const d = json.data;
+                const bcField = document.getElementById('barcode');
+                if (bcField) bcField.value = ean; // conservé en base : sert à retrouver un prix
                 if (d.name) document.getElementById('name').value = d.name;
                 markSuggested('producer', d.producer);
                 markSuggested('volume_ml', d.volume_ml);
@@ -753,9 +755,6 @@
         markSuggested('drink_until_year', data.drink_until_year);
         markSuggested('description', data.description);
         markSuggested('food_pairing', data.food_pairing);
-        if (data.estimated_price_eur) {
-            markSuggested('current_estimated_price', Math.round(data.estimated_price_eur * 100) / 100);
-        }
     }
 
     // --- AI enrich from name/producer/vintage ---
@@ -841,90 +840,56 @@
         });
     }
 
-    // --- Price estimate on wine detail page ---
-    const btnEstimatePrice = document.getElementById('btn-estimate-price');
-    if (btnEstimatePrice) {
-        btnEstimatePrice.addEventListener('click', async function () {
-            const status = document.getElementById('price-estimate-status');
-            const wineId = btnEstimatePrice.getAttribute('data-wine-id');
-            btnEstimatePrice.disabled = true;
-            status.textContent = 'Estimation en cours...';
-            const prog = startAiProgress(status);
+    // --- Prix relevés Open Food Facts (fiche vin) ---
+    const btnOpenPrices = document.getElementById('btn-open-prices');
+    if (btnOpenPrices) {
+        btnOpenPrices.addEventListener('click', async function () {
+            const status = document.getElementById('open-prices-status');
+            const results = document.getElementById('open-prices-results');
+            const wineId = btnOpenPrices.getAttribute('data-wine-id');
+            btnOpenPrices.disabled = true;
+            results.innerHTML = '';
+            status.textContent = 'Recherche sur Open Food Facts…';
             try {
-                const res = await fetch('/pages/estimate_price.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
-                    body: JSON.stringify({ id: wineId }),
-                });
+                const res = await fetch('/pages/open_prices.php?id=' + encodeURIComponent(wineId));
                 const json = await res.json();
-                if (json.ok) {
-                    const d = json.data;
-                    status.innerHTML = 'Estimation IA: ' + (d.low_estimate ?? '?') + '–' + (d.high_estimate ?? '?') + ' ' + (d.currency || 'EUR')
-                        + (d.reasoning ? '<br><em>' + d.reasoning + '</em>' : '');
-                    const priceInput = document.querySelector('input[name="price"]');
-                    if (priceInput && d.high_estimate) {
-                        priceInput.value = d.high_estimate;
-                        priceInput.form.querySelector('input[name="source"]').value = 'ai';
-                    }
-                    prog.finish();
-                } else {
-                    status.textContent = 'Erreur IA: ' + (json.error || 'inconnue');
-                    prog.fail();
+                if (!json.ok) {
+                    status.textContent = json.error || 'Aucun prix trouvé.';
+                    return;
                 }
-            } catch (e) {
-                status.textContent = 'Erreur réseau lors de l\'estimation.';
-                prog.fail();
-            } finally {
-                btnEstimatePrice.disabled = false;
-            }
-        });
-    }
-
-    // --- Estimation IA du prix, depuis le formulaire d'ajout/modification ---
-    const btnEstimatePriceForm = document.getElementById('btn-estimate-price-form');
-    if (btnEstimatePriceForm) {
-        btnEstimatePriceForm.addEventListener('click', async function () {
-            const status = document.getElementById('price-estimate-status-form');
-            const wineId = btnEstimatePriceForm.getAttribute('data-wine-id');
-            const body = wineId ? { id: wineId } : {
-                name: (document.getElementById('name') || {}).value || '',
-                producer: (document.getElementById('producer') || {}).value || '',
-                region: (document.getElementById('region') || {}).value || '',
-                vintage: (document.getElementById('vintage') || {}).value || '',
-            };
-            if (!wineId && !body.name.trim()) {
-                status.textContent = 'Renseigne au moins le nom du vin.';
-                return;
-            }
-            btnEstimatePriceForm.disabled = true;
-            status.textContent = 'Estimation en cours...';
-            const prog = startAiProgress(status);
-            try {
-                const res = await fetch('/pages/estimate_price.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
-                    body: JSON.stringify(body),
+                if (!json.prices || !json.prices.length) {
+                    status.textContent = 'Aucun prix relevé pour ce code-barres sur Open Food Facts.';
+                    return;
+                }
+                status.textContent = json.prices.length + ' relevé(s) trouvé(s) :';
+                json.prices.forEach(function (p) {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; align-items:center; gap:0.7rem; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.9rem;';
+                    const label = document.createElement('span');
+                    label.style.flex = '1';
+                    const bits = [p.price.toFixed(2) + ' ' + (p.currency || 'EUR')];
+                    if (p.shop) bits.push(p.shop);
+                    if (p.date) bits.push(p.date);
+                    if (p.discounted) bits.push('(promo)');
+                    label.textContent = bits.join(' — ');
+                    const use = document.createElement('button');
+                    use.type = 'button';
+                    use.className = 'btn btn-sm';
+                    use.textContent = 'Utiliser';
+                    use.addEventListener('click', function () {
+                        document.getElementById('accept-open-price').value = p.price;
+                        const note = ['Open Food Facts', p.shop, p.date].filter(Boolean).join(' · ');
+                        document.getElementById('accept-open-note').value = note;
+                        document.getElementById('accept-open-price-form').submit();
+                    });
+                    row.appendChild(label);
+                    row.appendChild(use);
+                    results.appendChild(row);
                 });
-                const json = await res.json();
-                if (json.ok) {
-                    const d = json.data;
-                    status.innerHTML = 'Estimation IA: ' + (d.low_estimate ?? '?') + '–' + (d.high_estimate ?? '?') + ' ' + (d.currency || 'EUR')
-                        + (d.reasoning ? '<br><em>' + d.reasoning + '</em>' : '');
-                    const priceInput = document.getElementById('current_estimated_price');
-                    if (priceInput && d.high_estimate) {
-                        priceInput.value = d.high_estimate;
-                        priceInput.classList.add('field-suggested');
-                    }
-                    prog.finish();
-                } else {
-                    status.textContent = 'Erreur IA: ' + (json.error || 'inconnue');
-                    prog.fail();
-                }
             } catch (e) {
-                status.textContent = 'Erreur réseau lors de l\'estimation.';
-                prog.fail();
+                status.textContent = 'Erreur réseau lors de la recherche.';
             } finally {
-                btnEstimatePriceForm.disabled = false;
+                btnOpenPrices.disabled = false;
             }
         });
     }
