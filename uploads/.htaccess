@@ -1,0 +1,12 @@
+# Défense en profondeur : même si les noms de fichiers uploadés sont générés
+# aléatoirement avec une extension déduite du contenu réel (jamais .php), on
+# interdit explicitement toute exécution de script dans ce dossier.
+<FilesMatch "\.(php|phar|phtml|php3|php4|php5|php7|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+
+Options -Indexes -ExecCGI

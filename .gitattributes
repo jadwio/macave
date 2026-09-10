@@ -1,0 +1,4 @@
+# Fins de ligne LF partout : le code est déployé sur un hébergement Linux,
+# et le dépôt est cloné depuis plusieurs machines (Windows incluses).
+* text=auto eol=lf
+*.png binary

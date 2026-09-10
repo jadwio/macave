@@ -1,0 +1,3 @@
+# Ces fichiers ne sont que des dépendances PHP incluses côté serveur
+# (via require_once) — ils ne doivent jamais être accessibles directement.
+Require all denied

@@ -1,0 +1,18 @@
+# Secrets réels — jamais commités (voir config.example.php pour le modèle)
+config.php
+
+# Sauvegardes et photos d'étiquettes : données personnelles réelles
+# (dump complet de la base, images de bouteilles) — jamais commitées.
+/backups/
+/uploads/labels/*
+/uploads/scan_history/*
+!/uploads/.htaccess
+!/uploads/labels/.gitkeep
+
+# Scripts de test / migration ponctuels laissés par erreur
+_*.php
+_*.txt
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db

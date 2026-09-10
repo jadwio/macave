@@ -1,0 +1,32 @@
+# Bloque l'accès direct aux fichiers sensibles
+<Files "config.php">
+    Require all denied
+</Files>
+
+<FilesMatch "\.(sql|log|md)$">
+    Require all denied
+</FilesMatch>
+
+# Empêche la navigation dans les dossiers
+Options -Indexes
+
+# Le dossier des sauvegardes n'est jamais servi directement (téléchargement via backup_download.php)
+RedirectMatch 403 ^/backups/
+
+# Force HTTPS (Cloudflare Flexible SSL termine le TLS avant l'origine IONOS,
+# qui ne voit jamais HTTPS directement — on se fie donc aussi à X-Forwarded-Proto
+# pour éviter une boucle de redirection infinie)
+RewriteEngine On
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Route la racine vers pages/index.php
+DirectoryIndex pages/index.php
+
+# En-têtes de sécurité (défense en profondeur)
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

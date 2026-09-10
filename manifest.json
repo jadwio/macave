@@ -1,0 +1,16 @@
+{
+    "name": "Ma Cave",
+    "short_name": "Ma Cave",
+    "description": "Gestion de cave à vin personnelle",
+    "start_url": "/pages/index.php",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#14100f",
+    "theme_color": "#14100f",
+    "icons": [
+        { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    ]
+}
