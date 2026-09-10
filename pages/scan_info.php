@@ -334,45 +334,93 @@ require __DIR__ . '/../includes/layout_header.php';
         });
     });
 
+    // Réduit une photo avant envoi. Une image de téléphone brute (3-6 Mo) fait
+    // souvent dépasser le délai réseau côté serveur pendant l'analyse IA :
+    // c'était la cause des scans qu'il fallait relancer plusieurs fois.
+    function downscaleImage(file, maxDim, quality) {
+        return new Promise(function (resolve) {
+            if (!/^image\//.test(file.type) || file.type === 'image/gif') { resolve(file); return; }
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = function () {
+                URL.revokeObjectURL(url);
+                const longEdge = Math.max(img.naturalWidth, img.naturalHeight) || maxDim;
+                const scale = Math.min(1, maxDim / longEdge);
+                if (scale === 1 && file.size < 700 * 1024) { resolve(file); return; }
+                try {
+                    const cv = document.createElement('canvas');
+                    cv.width = Math.round(img.naturalWidth * scale);
+                    cv.height = Math.round(img.naturalHeight * scale);
+                    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+                    cv.toBlob(function (blob) {
+                        resolve(blob && blob.size < file.size ? blob : file);
+                    }, 'image/jpeg', quality);
+                } catch (e) { resolve(file); }
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+            img.src = url;
+        });
+    }
+
     async function analyzePhoto(file) {
         stopCamera(); // le scanner code-barres et la photo ne servent pas en même temps
         const preview = document.getElementById('si-photo-preview');
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
 
-        statusEl.textContent = 'Lecture de l\'étiquette et analyse en cours...';
         document.getElementById('si-result').style.display = 'none';
+        statusEl.textContent = 'Préparation de la photo...';
+        const photo = await downscaleImage(file, 1600, 0.82);
+
+        const maxTries = 3;
         const prog = window.aiProgress ? window.aiProgress(statusEl) : null;
-        try {
-            const form = new FormData();
-            form.append('photo', file);
-            const res = await fetch('/pages/wine_info_photo.php', {
-                method: 'POST',
-                headers: { 'X-CSRF-Token': csrf },
-                body: form,
-            });
-            const json = await res.json();
-            if (!json.ok) {
+        for (let attempt = 1; attempt <= maxTries; attempt++) {
+            statusEl.textContent = attempt === 1
+                ? 'Lecture de l\'étiquette et analyse en cours...'
+                : 'Réponse trop lente — nouvelle tentative (' + attempt + '/' + maxTries + ')...';
+            try {
+                const form = new FormData();
+                form.append('photo', photo, 'label.jpg');
+                const res = await fetch('/pages/wine_info_photo.php', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': csrf },
+                    body: form,
+                });
+                const json = await res.json();
+
+                if (json.ok) {
+                    const d = json.data;
+                    if (d.found === false || !d.name) {
+                        statusEl.textContent = 'Étiquette illisible ou vin non identifiable. Reprends la photo de plus près, ou saisis le nom.';
+                        if (prog) prog.fail();
+                        return;
+                    }
+                    document.getElementById('si-name').value = d.name;
+                    if (d.vintage) document.getElementById('si-vintage').value = d.vintage;
+                    renderResult(d.name, d.vintage || '', d, 'photo', photo);
+                    statusEl.textContent = '';
+                    if (prog) prog.finish();
+                    return;
+                }
+
+                // Erreur transitoire (délai réseau, saturation) → on rejoue tout seul
+                const transient = /réseau|timed out|expir|satur|temporairement|inattendue/i.test(json.error || '');
+                if (transient && attempt < maxTries) {
+                    await new Promise(function (r) { setTimeout(r, 1500); });
+                    continue;
+                }
                 statusEl.textContent = 'Erreur IA : ' + (json.error || 'inconnue');
                 if (prog) prog.fail();
                 return;
-            }
-            const d = json.data;
-            if (d.found === false || !d.name) {
-                statusEl.textContent = 'Étiquette illisible ou vin non identifiable. Reprends la photo de plus près, ou saisis le nom.';
+            } catch (err) {
+                if (attempt < maxTries) {
+                    await new Promise(function (r) { setTimeout(r, 1500); });
+                    continue;
+                }
+                statusEl.textContent = 'Erreur réseau lors de l\'analyse de la photo. Réessaie dans un instant.';
                 if (prog) prog.fail();
                 return;
             }
-            // Le nom lu sur l'étiquette alimente aussi les champs de recherche
-            document.getElementById('si-name').value = d.name;
-            if (d.vintage) document.getElementById('si-vintage').value = d.vintage;
-
-            renderResult(d.name, d.vintage || '', d, 'photo', file);
-            statusEl.textContent = '';
-            if (prog) prog.finish();
-        } catch (err) {
-            statusEl.textContent = 'Erreur réseau lors de l\'analyse de la photo.';
-            if (prog) prog.fail();
         }
     }
 

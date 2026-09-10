@@ -386,7 +386,14 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
 
     // Budget total borné : l'hébergement mutualisé coupe les scripts trop longs,
     // mieux vaut renoncer proprement que de se faire tuer sans réponse.
-    $deadline = microtime(true) + 40;
+    $callStart = microtime(true);
+    $deadline = $callStart + 40;
+
+    // Trace des tentatives, reportée dans le journal en cas d'échec : c'est ce
+    // qui permet de diagnostiquer après coup un scan qui a demandé plusieurs
+    // essais (modèle lent, délai réseau dépassé, quota...).
+    $attempts = [];
+    $payloadKo = round(strlen($payload) / 1024);
 
     $response = false;
     $httpCode = 0;
@@ -404,12 +411,16 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
             CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_TIMEOUT => max(8, min(25, $remaining)),
+            CURLOPT_CONNECTTIMEOUT => 8,
+            CURLOPT_TIMEOUT => max(8, min(28, $remaining)),
         ]);
         $response = curl_exec($ch);
         $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $elapsed = round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME), 1);
         $curlError = curl_error($ch);
         curl_close($ch);
+
+        $attempts[] = $candidate . '=' . ($response === false ? 'réseau(' . $elapsed . 's)' : $httpCode . '(' . $elapsed . 's)');
 
         // Rejouable : 404 (modèle indisponible pour cette clé), 503 (saturation),
         // 429 (quota épuisé pour CE modèle — le palier gratuit est compté par
@@ -422,15 +433,17 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
         }
     }
 
+    $trace = ' [envoi ' . $payloadKo . ' Ko, ' . round(microtime(true) - $callStart, 1) . 's, tentatives: ' . implode(' → ', $attempts) . ']';
+
     if ($response === false) {
-        return ['ok' => false, 'error' => 'Erreur réseau: ' . $curlError];
+        return ['ok' => false, 'error' => 'Erreur réseau: ' . $curlError . $trace];
     }
     if ($httpCode !== 200) {
         $detail = $httpCode === 404
             ? ' Ce modèle n\'est pas disponible pour ta clé — change-le dans Paramètres.'
             : ($httpCode === 503 ? ' Modèle temporairement saturé, réessaie dans un instant.'
                 : ($httpCode === 429 ? ' Quota gratuit atteint sur tous les modèles essayés — réessaie demain, ou change de modèle dans Paramètres.' : ''));
-        return ['ok' => false, 'error' => 'Gemini a renvoyé une erreur (' . $httpCode . ').' . $detail, 'raw' => $response];
+        return ['ok' => false, 'error' => 'Gemini a renvoyé une erreur (' . $httpCode . ').' . $detail . $trace, 'raw' => $response];
     }
 
     // Le modèle habituel de cette tâche était indisponible (quota/saturation) et
@@ -573,7 +586,14 @@ function wine_info_from_photo(string $base64Image, string $mimeType): array
         WINE_INFO_SCHEMA,
         'vision'  // entrée image : on vise le modèle choisi pour la lecture d'étiquettes
     );
-    log_ai_enrichment(null, 'photo', $prompt, $result['raw'] ?? ($result['error'] ?? null));
+    // Sur échec, on garde la taille de l'image dans le journal : une photo non
+    // réduite côté client est la cause n°1 d'un délai réseau dépassé.
+    $imgKo = round(strlen($base64Image) * 3 / 4 / 1024);
+    $logResp = $result['raw'] ?? ($result['error'] ?? null);
+    if (empty($result['ok']) && $logResp !== null) {
+        $logResp = 'photo ≈ ' . $imgKo . ' Ko | ' . $logResp;
+    }
+    log_ai_enrichment(null, 'photo', $prompt, $logResp);
     return $result;
 }
 

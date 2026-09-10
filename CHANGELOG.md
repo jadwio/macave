@@ -10,6 +10,17 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.7.1] — 2026-09-10 — Scan photo en magasin : fiabilité
+
+- La photo de l'étiquette est réduite (~1600 px) avant l'envoi : une image de
+  téléphone brute faisait souvent dépasser le délai réseau pendant l'analyse,
+  obligeant à relancer le scan plusieurs fois.
+- Nouvelle tentative automatique (jusqu'à 3) si la réponse de l'IA n'arrive
+  pas — plus besoin de refaire la manipulation à la main.
+- Le journal des requêtes IA enregistre désormais la taille de l'image, la
+  durée totale et le détail des tentatives (modèle, code, temps de réponse),
+  pour diagnostiquer ce type de lenteur.
+
 ## [2.7.0] — 2026-09-10 — Publication du code, export enrichi et suivi de version
 
 - Code source publié sur GitHub (github.com/jadwio/macave), secrets retirés du

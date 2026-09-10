@@ -12,9 +12,19 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.7.1';
 
 const CHANGELOG = [
+    [
+        'version' => '2.7.1',
+        'date' => '2026-09-10',
+        'title' => 'Scan photo en magasin : fiabilité',
+        'items' => [
+            "La photo de l'étiquette est réduite (~1600 px) avant l'envoi : une image de téléphone brute faisait souvent dépasser le délai réseau pendant l'analyse, obligeant à relancer le scan plusieurs fois.",
+            "Nouvelle tentative automatique (jusqu'à 3) si la réponse de l'IA n'arrive pas — plus besoin de refaire la manipulation à la main.",
+            "Le journal des requêtes IA enregistre désormais la taille de l'image, la durée totale et le détail des tentatives (modèle, code, temps de réponse), pour diagnostiquer ce type de lenteur.",
+        ],
+    ],
     [
         'version' => '2.7.0',
         'date' => '2026-09-10',
