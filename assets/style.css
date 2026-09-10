@@ -332,6 +332,19 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .badge-other { background: rgba(180,164,156,0.2); color: var(--text-muted); }
 .badge-ai { background: rgba(139,30,63,0.15); color: var(--accent-light); border: 1px dashed var(--accent-light); }
 .badge-alert { background: rgba(193,69,69,0.2); color: #e28787; }
+.badge-success { background: rgba(79,143,91,0.2); color: #8fd39c; }
+:root[data-theme="champagne"] .badge-success { background: rgba(60,122,72,0.15); color: #2b5a34; }
+
+/* Numéro de version (pied de page) + journal des versions (Paramètres) */
+.app-version { max-width: 1200px; margin: -1.5rem auto 1rem; padding: 0 1.5rem; text-align: center; font-size: 0.8rem; }
+.app-version a { color: var(--text-muted); }
+.changelog-entry { border-bottom: 1px solid var(--border); padding: 0.7rem 0; }
+.changelog-entry:last-child { border-bottom: none; }
+.changelog-entry summary { cursor: pointer; font-size: 0.95rem; list-style: revert; }
+.changelog-entry summary::marker { color: var(--text-muted); }
+.changelog-entry .changelog-date { color: var(--text-muted); font-size: 0.85rem; margin-left: 0.5rem; }
+.changelog-entry ul { margin: 0.6rem 0 0.2rem; padding-left: 1.3rem; color: var(--text-muted); font-size: 0.9rem; }
+.changelog-entry li { margin-bottom: 0.3rem; }
 
 form .field { margin-bottom: 1.1rem; }
 label { display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500; color: var(--text-muted); }

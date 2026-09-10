@@ -546,6 +546,15 @@ function format_price(?float $price): string
     return $cur['before'] ? $cur['symbol'] . $formatted : $formatted . ' ' . $cur['symbol'];
 }
 
+function format_date(?string $date, string $format = 'd/m/Y'): string
+{
+    if (!$date) {
+        return '—';
+    }
+    $ts = strtotime($date);
+    return $ts ? date($format, $ts) : '—';
+}
+
 /**
  * Enregistre une photo d'étiquette envoyée par l'utilisateur.
  * Partagé entre le formulaire du vin et la fiche détaillée, pour que la même

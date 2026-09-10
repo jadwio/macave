@@ -521,4 +521,20 @@ require __DIR__ . '/../includes/layout_header.php';
     <input type="text" readonly value="<?= e($cronUrl) ?>" onclick="this.select()" style="margin-top:0.5rem; font-size:0.8rem; color:var(--text-muted);">
 </div>
 
+<div class="card section" id="changelog">
+    <h2>Journal des versions <span class="badge badge-success">v<?= e(APP_VERSION) ?></span></h2>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Historique des évolutions de l'application, de la plus récente à la plus ancienne.</p>
+    <?php foreach (CHANGELOG as $i => $entry): ?>
+        <details class="changelog-entry" <?= $i === 0 ? 'open' : '' ?>>
+            <summary>
+                <strong>v<?= e($entry['version']) ?></strong> — <?= e($entry['title']) ?>
+                <span class="changelog-date"><?= e(format_date($entry['date'])) ?></span>
+            </summary>
+            <ul>
+                <?php foreach ($entry['items'] as $item): ?><li><?= e($item) ?></li><?php endforeach; ?>
+            </ul>
+        </details>
+    <?php endforeach; ?>
+</div>
+
 <?php require __DIR__ . '/../includes/layout_footer.php'; ?>
