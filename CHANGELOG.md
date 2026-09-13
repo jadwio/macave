@@ -17,7 +17,9 @@ des échanges de développement — les dates sont approximatives mais ordonnée
   à l'ajout d'étiquette en cave qui le fait déjà — un oubli lors de la mise en
   place de l'historique de scan, pas un réglage désactivé.
 - Les 15 photos déjà présentes dans l'historique ont été recadrées
-  rétroactivement.
+  rétroactivement, ainsi que les 9 étiquettes déjà enregistrées sur des vins
+  de la cave (8 réussies, 1 laissée telle quelle faute de détection
+  concluante).
 - Nettoyage : suppression d'appels dépréciés depuis PHP 8.0 (curl_close,
   imagedestroy), sans effet mais qui polluaient les journaux de débogage.
 
