@@ -10,6 +10,17 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.9.1] — 2026-09-13 — Recadrage automatique des photos de l'historique de scan
+
+- Corrigé : les photos prises depuis « Scanner un vin en magasin » n'étaient
+  jamais recadrées sur l'étiquette (bouteille entière conservée), contrairement
+  à l'ajout d'étiquette en cave qui le fait déjà — un oubli lors de la mise en
+  place de l'historique de scan, pas un réglage désactivé.
+- Les 15 photos déjà présentes dans l'historique ont été recadrées
+  rétroactivement.
+- Nettoyage : suppression d'appels dépréciés depuis PHP 8.0 (curl_close,
+  imagedestroy), sans effet mais qui polluaient les journaux de débogage.
+
 ## [2.9.0] — 2026-09-13 — Le scanner magasin cherche aussi un prix réel
 
 - Le scanner en magasin cherche désormais un prix réellement relevé (Open

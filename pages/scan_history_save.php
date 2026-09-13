@@ -2,6 +2,7 @@
 // Enregistre ou supprime une entrée de l'historique de scan (page Scanner).
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/scan_history.php';
+require_once __DIR__ . '/../includes/ai_enrichment.php'; // crop_label_to_bottle()
 
 header('Content-Type: application/json');
 
@@ -60,6 +61,16 @@ if ($rawB64 !== '' && strlen($rawB64) <= 30000) {
     }
 }
 
+// Ce recadrage n'était jamais appliqué ici (contrairement à l'ajout d'étiquette
+// en cave) : la photo du scanner restait telle quelle, bouteille entière comprise.
+// Appelé après l'enregistrement (fichier déjà sur disque), en second plan comme
+// le reste de cette sauvegarde : un échec de détection laisse juste la photo
+// d'origine, sans jamais faire échouer le scan.
+$photoPath = upload_scan_photo('photo');
+if ($photoPath) {
+    crop_label_to_bottle(__DIR__ . '/../' . $photoPath);
+}
+
 $entry = save_scan_history($db, [
     'scan_type' => $scanType,
     'wine_name' => $wineName,
@@ -69,7 +80,7 @@ $entry = save_scan_history($db, [
     'color' => trim($_POST['color'] ?? ''),
     'price_low' => is_numeric($_POST['price_low'] ?? null) ? (float) $_POST['price_low'] : null,
     'price_high' => is_numeric($_POST['price_high'] ?? null) ? (float) $_POST['price_high'] : null,
-    'photo_path' => upload_scan_photo('photo'),
+    'photo_path' => $photoPath,
     'latitude' => $lat,
     'longitude' => $lon,
     'details_json' => $detailsJson,

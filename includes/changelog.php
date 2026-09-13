@@ -12,9 +12,19 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.9.1';
 
 const CHANGELOG = [
+    [
+        'version' => '2.9.1',
+        'date' => '2026-09-13',
+        'title' => 'Recadrage automatique des photos de l\'historique de scan',
+        'items' => [
+            "Corrigé : les photos prises depuis « Scanner un vin en magasin » n'étaient jamais recadrées sur l'étiquette (bouteille entière conservée), contrairement à l'ajout d'étiquette en cave qui le fait déjà — un oubli lors de la mise en place de l'historique de scan, pas un réglage désactivé.",
+            "Les 15 photos déjà présentes dans l'historique ont été recadrées rétroactivement.",
+            "Nettoyage : suppression d'appels dépréciés depuis PHP 8.0 (curl_close, imagedestroy), sans effet mais qui polluaient les journaux de débogage.",
+        ],
+    ],
     [
         'version' => '2.9.0',
         'date' => '2026-09-13',

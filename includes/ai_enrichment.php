@@ -410,7 +410,7 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
         $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $elapsed = round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME), 1);
         $curlError = curl_error($ch);
-        curl_close($ch);
+        // curl_close() est un no-op déprécié depuis PHP 8.0 — la ressource se libère seule.
 
         $attempts[] = $candidate . '=' . ($response === false ? 'réseau(' . $elapsed . 's)' : $httpCode . '(' . $elapsed . 's)');
 
@@ -712,13 +712,10 @@ function crop_label_to_bottle(string $absolutePath): bool
 
     $cropped = imagecrop($source, ['x' => $px1, 'y' => $py1, 'width' => $cropWidth, 'height' => $cropHeight]);
     if ($cropped === false) {
-        imagedestroy($source);
         return false;
     }
 
-    $ok = $savers[$mime]($cropped, $absolutePath);
-    imagedestroy($source);
-    imagedestroy($cropped);
-
-    return (bool) $ok;
+    // imagedestroy() est un no-op déprécié depuis PHP 8.0 (les ressources GD
+    // sont des objets, libérés par le ramasse-miettes).
+    return (bool) $savers[$mime]($cropped, $absolutePath);
 }
