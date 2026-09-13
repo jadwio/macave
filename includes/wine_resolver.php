@@ -60,7 +60,7 @@ function wr_http_get(string $url, int $timeout = 12): ?string
     ]);
     $body = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    // curl_close() est un no-op déprécié depuis PHP 8.0 — la ressource se libère seule.
     return ($body === false || $code >= 400) ? null : $body;
 }
 

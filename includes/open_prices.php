@@ -67,6 +67,48 @@ function open_prices_lookup(string $barcode): array
     return ['ok' => true, 'prices' => $prices];
 }
 
+/**
+ * Tente de retrouver un code-barres pour un vin identifié par son nom (et
+ * éventuellement son producteur), via la recherche Open Food Facts déjà
+ * utilisée par le résolveur de vin (barcode_lookup.php / wine_resolve.php).
+ * Best effort, très inégal selon le vin (couvre surtout la grande
+ * distribution) — retourne null sinon, sans lever d'erreur.
+ */
+function guess_barcode_from_name(string $name, ?string $producer = null): ?string
+{
+    require_once __DIR__ . '/wine_resolver.php';
+    $query = trim($name . ' ' . ($producer ?? ''));
+    if ($query === '') {
+        return null;
+    }
+    $candidate = wr_source_off_search($query);
+    return $candidate['ean'] ?? null;
+}
+
+/**
+ * Synthèse chiffrée d'une liste de relevés (moyenne/mini/maxi), limitée aux
+ * prix en euros et aux plus récents : mélanger les devises fausserait la
+ * moyenne, et un vieux relevé pèse moins qu'un récent.
+ *
+ * @param array<int,array> $prices comme renvoyé par open_prices_lookup()
+ * @return array{avg:float,low:float,high:float,count:int}|null
+ */
+function summarize_prices(array $prices, int $limit = 10): ?array
+{
+    $eur = array_values(array_filter($prices, fn($p) => strtoupper((string) ($p['currency'] ?? '')) === 'EUR'));
+    $sample = array_slice($eur, 0, $limit);
+    if (!$sample) {
+        return null;
+    }
+    $values = array_column($sample, 'price');
+    return [
+        'avg' => round(array_sum($values) / count($values), 2),
+        'low' => min($values),
+        'high' => max($values),
+        'count' => count($sample),
+    ];
+}
+
 /** Libellé court d'un relevé, pour la note d'historique. */
 function open_prices_note(array $price): string
 {

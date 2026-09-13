@@ -363,24 +363,21 @@ require __DIR__ . '/../includes/layout_header.php';
             </div>
         </form>
 
-        <?php if (!empty($wine['barcode'])): ?>
-            <button type="button" id="btn-open-prices" class="btn btn-sm" data-wine-id="<?= $id ?>" style="margin-top:0.4rem;">
-                <?= icon('search', 15) ?> Chercher un prix (Open Food Facts)
-            </button>
-            <div id="open-prices-status" class="ai-status"></div>
-            <div id="open-prices-results"></div>
-            <form method="post" action="/pages/update_price.php" id="accept-open-price-form" style="display:none;">
-                <?= csrf_field() ?>
-                <input type="hidden" name="id" value="<?= $id ?>">
-                <input type="hidden" name="source" value="open_prices">
-                <input type="hidden" name="price" id="accept-open-price">
-                <input type="hidden" name="note" id="accept-open-note">
-            </form>
-        <?php else: ?>
-            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.5rem;">
-                Ajoute le code-barres du vin (via <a href="/pages/wine_form.php?id=<?= $id ?>">Modifier</a>) pour chercher un prix relevé sur Open Food Facts.
-            </p>
+        <button type="button" id="btn-open-prices" class="btn btn-sm" data-wine-id="<?= $id ?>" style="margin-top:0.4rem;">
+            <?= icon('search', 15) ?> Chercher un prix (Open Food Facts)
+        </button>
+        <?php if (empty($wine['barcode'])): ?>
+            <span style="color:var(--text-muted); font-size:0.82rem;"> — sans code-barres enregistré, la recherche se fait par nom (moins fiable)</span>
         <?php endif; ?>
+        <div id="open-prices-status" class="ai-status"></div>
+        <div id="open-prices-results"></div>
+        <form method="post" action="/pages/update_price.php" id="accept-open-price-form" style="display:none;">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= $id ?>">
+            <input type="hidden" name="source" value="open_prices">
+            <input type="hidden" name="price" id="accept-open-price">
+            <input type="hidden" name="note" id="accept-open-note">
+        </form>
     </div>
 </div>
 

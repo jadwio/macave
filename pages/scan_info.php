@@ -109,7 +109,7 @@ require __DIR__ . '/../includes/layout_header.php';
     <div class="grid grid-3 section" style="margin-bottom:1rem;">
         <div class="card stat-tile">
             <div class="value" id="si-r-price" style="font-size:1.4rem;">—</div>
-            <div class="label">Prix boutique indicatif</div>
+            <div class="label" id="si-r-price-label" title="Recherche d'un prix réellement relevé en cours…">Prix boutique indicatif (IA)</div>
         </div>
         <div class="card stat-tile">
             <div class="value" id="si-r-garde" style="font-size:1.15rem;">—</div>
@@ -208,6 +208,7 @@ require __DIR__ . '/../includes/layout_header.php';
     let detector = null;
     let lastProducer = '';
     let currentScanType = 'name';
+    let currentBarcode = null; // rempli uniquement quand l'identification part d'un scan EAN
     // Erreurs qui valent la peine d'être rejouées automatiquement : délai réseau,
     // saturation du modèle, ou réponse structurellement valide mais vide de
     // contenu (le modèle "réfléchit" puis ne remplit que 2-3 champs — vu sur
@@ -256,6 +257,7 @@ require __DIR__ . '/../includes/layout_header.php';
             stopCamera();
             document.getElementById('si-name').value = json.data.title;
             lastProducer = '';
+            currentBarcode = null; // URL de QR code : pas de code-barres associé
             analyze();
         } catch (err) {
             statusEl.textContent = 'Erreur réseau lors de l\'analyse du QR code.';
@@ -299,6 +301,7 @@ require __DIR__ . '/../includes/layout_header.php';
     });
 
     async function lookupEan(ean) {
+        currentBarcode = ean; // conservé pour chercher un prix réel une fois le vin identifié
         statusEl.textContent = 'Recherche du code ' + ean + '...';
         try {
             const res = await fetch('/pages/barcode_lookup.php?ean=' + encodeURIComponent(ean));
@@ -369,6 +372,7 @@ require __DIR__ . '/../includes/layout_header.php';
 
     async function analyzePhoto(file) {
         stopCamera(); // le scanner code-barres et la photo ne servent pas en même temps
+        currentBarcode = null; // une photo n'apporte pas de code-barres
         const preview = document.getElementById('si-photo-preview');
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
@@ -428,9 +432,9 @@ require __DIR__ . '/../includes/layout_header.php';
         }
     }
 
-    document.getElementById('si-analyze-btn').addEventListener('click', function () { currentScanType = 'name'; lastProducer = ''; analyze(); });
+    document.getElementById('si-analyze-btn').addEventListener('click', function () { currentScanType = 'name'; currentBarcode = null; lastProducer = ''; analyze(); });
     document.getElementById('si-name').addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { currentScanType = 'name'; lastProducer = ''; analyze(); }
+        if (e.key === 'Enter') { currentScanType = 'name'; currentBarcode = null; lastProducer = ''; analyze(); }
     });
 
     const COLOR_LABELS = { red: 'Rouge', white: 'Blanc', rose: 'Rosé', sparkling: 'Effervescent', sweet: 'Moelleux', fortified: 'Fortifié', other: 'Vin' };
@@ -489,6 +493,34 @@ require __DIR__ . '/../includes/layout_header.php';
         }
         displayResult(name, vintage, d);
         saveScanHistory(scanType || 'name', name, vintage, d, photoFile || null);
+        // En second plan : un prix réellement relevé prime toujours sur l'estimation IA.
+        lookupRealPrice(name, d.producer || '', currentBarcode);
+    }
+
+    // Cherche un prix réel (Open Food Facts) pour compléter — ou remplacer —
+    // l'estimation IA affichée : l'IA n'est qu'un dernier recours, jamais le
+    // premier choix, quand on cherche à faire une bonne affaire en rayon.
+    async function lookupRealPrice(name, producer, barcode) {
+        const priceEl = document.getElementById('si-r-price');
+        const labelEl = document.getElementById('si-r-price-label');
+        try {
+            const params = new URLSearchParams({ name: name });
+            if (producer) params.set('producer', producer);
+            if (barcode) params.set('barcode', barcode);
+            const res = await fetch('/pages/scan_price_lookup.php?' + params.toString());
+            const json = await res.json();
+            if (json.ok && json.found) {
+                priceEl.textContent = json.avg.toFixed(2).replace('.', ',') + ' €';
+                labelEl.textContent = 'Prix moyen relevé (' + json.count + ' prix · Open Food Facts)';
+                labelEl.title = 'Entre ' + json.low.toFixed(2).replace('.', ',') + ' € et ' + json.high.toFixed(2).replace('.', ',') + ' € — relevés réels, pas une estimation.';
+            } else {
+                labelEl.textContent = 'Prix indicatif (estimation IA — aucun prix réel trouvé)';
+                labelEl.title = '';
+            }
+        } catch (e) {
+            labelEl.textContent = 'Prix indicatif (estimation IA)';
+            labelEl.title = '';
+        }
     }
 
     // Affichage pur de la fiche de synthèse, sans enregistrement — réutilisé pour

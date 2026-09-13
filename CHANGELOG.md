@@ -10,6 +10,21 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.9.0] — 2026-09-13 — Le scanner magasin cherche aussi un prix réel
+
+- Le scanner en magasin cherche désormais un prix réellement relevé (Open
+  Food Facts) avant de se contenter du prix indicatif de l'IA : celle-ci ne
+  sert plus qu'en dernier recours, comme sur la fiche d'un vin.
+- Recherche par code-barres quand le scan en fournit un, sinon tentative par
+  nom + producteur (moins fiable, mais élargit la couverture).
+- En pratique la couverture reste faible sur le vin (base contributive,
+  surtout grande distribution) : l'estimation IA reste affichée la plupart
+  du temps, mais désormais étiquetée sans ambiguïté « aucun prix réel
+  trouvé ».
+- La fiche d'un vin sans code-barres enregistré peut maintenant, elle aussi,
+  tenter une recherche par nom (auparavant il fallait d'abord saisir le
+  code-barres à la main).
+
 ## [2.8.1] — 2026-09-13 — Scan magasin : réponses IA incomplètes
 
 - Diagnostiqué depuis le journal : le 12/09 à 16h07, l'analyse de la photo du
