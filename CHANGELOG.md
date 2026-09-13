@@ -10,6 +10,22 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.8.1] — 2026-09-13 — Scan magasin : réponses IA incomplètes
+
+- Diagnostiqué depuis le journal : le 12/09 à 16h07, l'analyse de la photo du
+  Château d'Escurac a renvoyé un JSON valide mais quasi vide (seuls
+  nom/producteur/millésime remplis, sans description ni prix) — le modèle
+  s'arrêtait après une phase de réflexion sans vraiment répondre. Il avait
+  fallu refaire la recherche par le nom.
+- Le schéma demandé à l'IA impose désormais que `found` et `description`
+  soient présents dans la réponse, ce qui réduit fortement le risque qu'un
+  modèle s'arrête en cours de route.
+- Filet de sécurité supplémentaire : une réponse qui arrive malgré tout sans
+  description est maintenant traitée comme un échec et déclenche
+  automatiquement une nouvelle tentative — y compris pour la recherche par
+  nom, qui n'avait pas encore ce recours automatique (seule la photo l'avait
+  depuis la v2.7.1).
+
 ## [2.8.0] — 2026-09-10 — Prix réels : fin de l'estimation IA, Open Food Facts + saisie manuelle
 
 - L'estimation de prix par IA est retirée (fiche et formulaire) : trop

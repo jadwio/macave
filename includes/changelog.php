@@ -12,9 +12,19 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.8.1';
 
 const CHANGELOG = [
+    [
+        'version' => '2.8.1',
+        'date' => '2026-09-13',
+        'title' => 'Scan magasin : réponses IA incomplètes',
+        'items' => [
+            "Diagnostiqué depuis le journal : le 12/09 à 16h07, l'analyse de la photo du Château d'Escurac a renvoyé un JSON valide mais quasi vide (seuls nom/producteur/millésime remplis, sans description ni prix) — le modèle s'arrêtait après une phase de réflexion sans vraiment répondre. Il avait fallu refaire la recherche par le nom.",
+            "Le schéma demandé à l'IA impose désormais que 'found' et 'description' soient présents dans la réponse, ce qui réduit fortement le risque qu'un modèle s'arrête en cours de route.",
+            "Filet de sécurité supplémentaire : une réponse qui arrive malgré tout sans description est maintenant traitée comme un échec et déclenche automatiquement une nouvelle tentative — y compris pour la recherche par nom, qui n'avait pas encore ce recours automatique (seule la photo l'avait depuis la v2.7.1).",
+        ],
+    ],
     [
         'version' => '2.8.0',
         'date' => '2026-09-10',

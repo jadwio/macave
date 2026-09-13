@@ -42,6 +42,12 @@ const WINE_INFO_SCHEMA = [
         'drink_until_year' => ['type' => 'integer'],
         'food_pairing' => ['type' => 'string'],
     ],
+    // Sans ceci, un modèle peut renvoyer un JSON valide mais quasi vide (vu sur
+    // gemini-3.8-flash le 12/09/2026 : seuls name/producer/vintage remplis,
+    // "found" absent, aucune description). Limité à ces deux champs : les
+    // autres (prix, garde...) doivent rester réellement absents quand le vin
+    // n'est pas identifiable, pas forcés à une valeur inventée.
+    'required' => ['found', 'description'],
 ];
 
 const LABEL_CROP_SCHEMA = [
@@ -535,8 +541,30 @@ function wine_info_summary(string $name, ?string $producer, ?string $vintage): a
         . "- food_pairing: accords mets-vin principaux.\n"
         . "Si tu n'es pas sûr d'un champ, laisse-le vide plutôt que d'inventer.";
 
-    $result = gemini_call([['text' => $prompt]], WINE_INFO_SCHEMA, 'summary');
+    $result = wine_info_guard_incomplete(gemini_call([['text' => $prompt]], WINE_INFO_SCHEMA, 'summary'));
     log_ai_enrichment(null, 'text', $prompt, $result['raw'] ?? ($result['error'] ?? null));
+    return $result;
+}
+
+/**
+ * Filet de sécurité : un modèle peut renvoyer un JSON structurellement valide
+ * mais vide de contenu utile — vu sur gemini-3.8-flash le 12/09/2026, "found"
+ * absent et seuls name/producer/vintage remplis, alors que le vin était bien
+ * identifié. Le "required" du schéma limite déjà le risque, mais on vérifie
+ * aussi ici pour couvrir un modèle qui ne l'honorerait pas parfaitement.
+ * Traité comme un échec réseau pour déclencher la tentative automatique
+ * suivante côté client (voir TRANSIENT_ERROR_RE dans scan_info.php).
+ */
+function wine_info_guard_incomplete(array $result): array
+{
+    if (!empty($result['ok'])) {
+        $data = $result['data'] ?? [];
+        // found === false est un résultat légitime (étiquette illisible, vin
+        // inconnu) : pas de description à attendre, ce n'est pas un échec.
+        if (($data['found'] ?? null) !== false && empty($data['description'])) {
+            return ['ok' => false, 'error' => 'Réponse IA incomplète (champs manquants).', 'raw' => $result['raw'] ?? null];
+        }
+    }
     return $result;
 }
 
@@ -565,11 +593,11 @@ function wine_info_from_photo(string $base64Image, string $mimeType): array
         . "Si l'étiquette est illisible ou n'est pas un vin, mets found à false. "
         . "Si tu n'es pas sûr d'un champ, laisse-le vide plutôt que d'inventer.";
 
-    $result = gemini_call(
+    $result = wine_info_guard_incomplete(gemini_call(
         [['text' => $prompt], ['inline_data' => ['mime_type' => $mimeType, 'data' => $base64Image]]],
         WINE_INFO_SCHEMA,
         'vision'  // entrée image : on vise le modèle choisi pour la lecture d'étiquettes
-    );
+    ));
     // Sur échec, on garde la taille de l'image dans le journal : une photo non
     // réduite côté client est la cause n°1 d'un délai réseau dépassé.
     $imgKo = round(strlen($base64Image) * 3 / 4 / 1024);

@@ -208,6 +208,11 @@ require __DIR__ . '/../includes/layout_header.php';
     let detector = null;
     let lastProducer = '';
     let currentScanType = 'name';
+    // Erreurs qui valent la peine d'être rejouées automatiquement : délai réseau,
+    // saturation du modèle, ou réponse structurellement valide mais vide de
+    // contenu (le modèle "réfléchit" puis ne remplit que 2-3 champs — vu sur
+    // gemini-3.8-flash le 2026-09-12, cf. journal des versions v2.8.1).
+    const TRANSIENT_ERROR_RE = /réseau|timed out|expir|satur|temporairement|inattendue|incomplète/i;
 
     function stopCamera() {
         scanning = false;
@@ -403,9 +408,8 @@ require __DIR__ . '/../includes/layout_header.php';
                     return;
                 }
 
-                // Erreur transitoire (délai réseau, saturation) → on rejoue tout seul
-                const transient = /réseau|timed out|expir|satur|temporairement|inattendue/i.test(json.error || '');
-                if (transient && attempt < maxTries) {
+                // Erreur transitoire → on rejoue tout seul
+                if (TRANSIENT_ERROR_RE.test(json.error || '') && attempt < maxTries) {
                     await new Promise(function (r) { setTimeout(r, 1500); });
                     continue;
                 }
@@ -438,27 +442,43 @@ require __DIR__ . '/../includes/layout_header.php';
             statusEl.textContent = 'Renseigne le nom du vin (ou scanne un code-barres).';
             return;
         }
-        statusEl.textContent = 'Analyse du vin en cours...';
         document.getElementById('si-result').style.display = 'none';
+
+        const maxTries = 3;
         const prog = window.aiProgress ? window.aiProgress(statusEl) : null;
-        try {
-            const res = await fetch('/pages/wine_info.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-                body: JSON.stringify({ name: name, producer: lastProducer, vintage: vintage }),
-            });
-            const json = await res.json();
-            if (!json.ok) {
+        for (let attempt = 1; attempt <= maxTries; attempt++) {
+            statusEl.textContent = attempt === 1
+                ? 'Analyse du vin en cours...'
+                : 'Réponse incomplète — nouvelle tentative (' + attempt + '/' + maxTries + ')...';
+            try {
+                const res = await fetch('/pages/wine_info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+                    body: JSON.stringify({ name: name, producer: lastProducer, vintage: vintage }),
+                });
+                const json = await res.json();
+                if (json.ok) {
+                    renderResult(name, vintage, json.data, currentScanType);
+                    statusEl.textContent = '';
+                    if (prog) prog.finish();
+                    return;
+                }
+                if (TRANSIENT_ERROR_RE.test(json.error || '') && attempt < maxTries) {
+                    await new Promise(function (r) { setTimeout(r, 1500); });
+                    continue;
+                }
                 statusEl.textContent = 'Erreur IA : ' + (json.error || 'inconnue');
                 if (prog) prog.fail();
                 return;
+            } catch (err) {
+                if (attempt < maxTries) {
+                    await new Promise(function (r) { setTimeout(r, 1500); });
+                    continue;
+                }
+                statusEl.textContent = 'Erreur réseau lors de l\'analyse. Réessaie dans un instant.';
+                if (prog) prog.fail();
+                return;
             }
-            renderResult(name, vintage, json.data, currentScanType);
-            statusEl.textContent = '';
-            if (prog) prog.finish();
-        } catch (err) {
-            statusEl.textContent = 'Erreur réseau lors de l\'analyse.';
-            if (prog) prog.fail();
         }
     }
 
