@@ -284,8 +284,10 @@ a:hover { text-decoration: underline; }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-2-1 { grid-template-columns: 2fr 1fr; } /* texte / photo d'étiquette (scanner) */
 @media (max-width: 900px) { .grid-4, .grid-3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .grid-2-1 { grid-template-columns: 1fr; } }
 
 .stat-tile { text-align: center; }
 .stat-tile .value { font-family: Arial, Helvetica, sans-serif; font-size: 2rem; font-weight: 700; color: var(--gold); line-height: 1.2; margin-bottom: 0.15rem; }

@@ -10,6 +10,17 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.9.2] — 2026-09-13 — Fiche du scanner : photo affichée, faux « 0 » corrigé
+
+- Corrigé : un vin scanné sans millésime identifié affichait un « 0 »
+  parasite après son nom en rouvrant sa fiche depuis l'historique (ex.
+  « Château d'Avrillé Sélection 0 ») — le millésime absent était converti en
+  zéro avant d'être inséré dans la page, un chiffre qui ressemble à une
+  vraie valeur en JavaScript alors qu'il ne devrait rien afficher du tout.
+- La photo de l'étiquette (scan par photo) s'affiche désormais à côté de la
+  synthèse de dégustation, sur le tiers droit — au moment du scan comme en
+  rouvrant une fiche depuis l'historique.
+
 ## [2.9.1] — 2026-09-13 — Recadrage automatique des photos de l'historique de scan
 
 - Corrigé : les photos prises depuis « Scanner un vin en magasin » n'étaient

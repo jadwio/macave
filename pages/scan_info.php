@@ -123,22 +123,27 @@ require __DIR__ . '/../includes/layout_header.php';
 
     <div id="si-r-garde-advice" style="padding:0.7rem 0.9rem; border:1px solid var(--gold); border-radius:8px; margin-bottom:1rem; display:none;"></div>
 
-    <h3>Synthèse de dégustation</h3>
-    <p id="si-r-description" style="margin-bottom:1rem;"></p>
+    <div class="grid grid-2-1" style="align-items:start;">
+        <div>
+            <h3>Synthèse de dégustation</h3>
+            <p id="si-r-description" style="margin-bottom:1rem;"></p>
 
-    <div id="si-r-reputation-wrap" style="display:none;">
-        <h3>Réputation &amp; niveau de gamme</h3>
-        <p id="si-r-reputation" style="margin-bottom:1rem;"></p>
-    </div>
+            <div id="si-r-reputation-wrap" style="display:none;">
+                <h3>Réputation &amp; niveau de gamme</h3>
+                <p id="si-r-reputation" style="margin-bottom:1rem;"></p>
+            </div>
 
-    <div id="si-r-grapes-wrap" style="display:none;">
-        <h3>Cépages</h3>
-        <p id="si-r-grapes" style="margin-bottom:1rem;"></p>
-    </div>
+            <div id="si-r-grapes-wrap" style="display:none;">
+                <h3>Cépages</h3>
+                <p id="si-r-grapes" style="margin-bottom:1rem;"></p>
+            </div>
 
-    <div id="si-r-pairing-wrap" style="display:none;">
-        <h3>Accords mets-vin</h3>
-        <p id="si-r-pairing" style="margin-bottom:1rem;"></p>
+            <div id="si-r-pairing-wrap" style="display:none;">
+                <h3>Accords mets-vin</h3>
+                <p id="si-r-pairing" style="margin-bottom:1rem;"></p>
+            </div>
+        </div>
+        <img id="si-r-photo" alt="Étiquette du vin" style="display:none; width:100%; max-height:420px; border-radius:8px; border:1px solid var(--border); object-fit:cover;">
     </div>
 
     <p style="color:var(--text-muted); font-size:0.8rem; border-top:1px solid var(--border); padding-top:0.8rem;">
@@ -186,7 +191,8 @@ require __DIR__ . '/../includes/layout_header.php';
                 <div class="scan-history-actions">
                     <?php if ($h['details_json']): ?>
                         <button type="button" class="btn btn-sm scan-history-view"
-                                data-name="<?= e($h['wine_name']) ?>" data-vintage="<?= (int) ($h['vintage'] ?? 0) ?>"
+                                data-name="<?= e($h['wine_name']) ?>" data-vintage="<?= $h['vintage'] ? (int) $h['vintage'] : '' ?>"
+                                data-photo="<?= e($h['photo_path'] ?? '') ?>"
                                 data-details="<?= e($h['details_json']) ?>">Voir la fiche</button>
                     <?php endif; ?>
                     <a href="/pages/wine_form.php?<?= e(http_build_query($addParams)) ?>" class="btn btn-sm btn-accent">Ajouter à ma cave</a>
@@ -491,7 +497,9 @@ require __DIR__ . '/../includes/layout_header.php';
             statusEl.textContent = 'L\'IA ne connaît pas ce vin assez précisément pour donner une synthèse fiable.';
             return;
         }
-        displayResult(name, vintage, d);
+        // Aperçu immédiat : la photo telle que prise (le fichier définitif, recadré
+        // sur l'étiquette, remplacera cet aperçu une fois l'historique enregistré).
+        displayResult(name, vintage, d, photoFile ? URL.createObjectURL(photoFile) : null);
         saveScanHistory(scanType || 'name', name, vintage, d, photoFile || null);
         // En second plan : un prix réellement relevé prime toujours sur l'estimation IA.
         lookupRealPrice(name, d.producer || '', currentBarcode);
@@ -525,7 +533,11 @@ require __DIR__ . '/../includes/layout_header.php';
 
     // Affichage pur de la fiche de synthèse, sans enregistrement — réutilisé pour
     // rouvrir une fiche déjà en historique (bouton « Voir la fiche »).
-    function displayResult(name, vintage, d) {
+    function displayResult(name, vintage, d, photoUrl) {
+        const photoEl = document.getElementById('si-r-photo');
+        if (photoUrl) { photoEl.src = photoUrl; photoEl.style.display = 'block'; }
+        else { photoEl.style.display = 'none'; photoEl.removeAttribute('src'); }
+
         document.getElementById('si-r-name').textContent = name + (vintage ? ' ' + vintage : '');
         const subParts = [];
         if (d.producer && d.producer !== name) subParts.push(d.producer);
@@ -598,7 +610,18 @@ require __DIR__ . '/../includes/layout_header.php';
                 body: form,
             });
             const json = await res.json();
-            if (json.ok && json.entry) prependHistoryEntry(json.entry);
+            if (json.ok && json.entry) {
+                prependHistoryEntry(json.entry);
+                // Remplace l'aperçu brut par la version définitive (recadrée sur
+                // l'étiquette côté serveur) — seulement si le résultat affiché est
+                // toujours celui de ce scan (l'utilisateur n'a pas enchaîné entretemps).
+                const photoEl = document.getElementById('si-r-photo');
+                const nameEl = document.getElementById('si-r-name');
+                if (json.entry.photo_path && nameEl && nameEl.textContent.startsWith(name)) {
+                    photoEl.src = '/' + json.entry.photo_path;
+                    photoEl.style.display = 'block';
+                }
+            }
         } catch (err) { /* l'historique est un bonus, jamais bloquant pour l'analyse */ }
     }
 
@@ -667,6 +690,7 @@ require __DIR__ . '/../includes/layout_header.php';
             view.textContent = 'Voir la fiche';
             view.dataset.name = entry.wine_name;
             view.dataset.vintage = entry.vintage || '';
+            view.dataset.photo = entry.photo_path || '';
             view.dataset.details = entry.details_json;
             actions.appendChild(view);
         }
@@ -698,7 +722,8 @@ require __DIR__ . '/../includes/layout_header.php';
         if (viewBtn) {
             try {
                 const d = JSON.parse(viewBtn.dataset.details);
-                displayResult(viewBtn.dataset.name, viewBtn.dataset.vintage, d);
+                const photoUrl = viewBtn.dataset.photo ? '/' + viewBtn.dataset.photo : null;
+                displayResult(viewBtn.dataset.name, viewBtn.dataset.vintage, d, photoUrl);
             } catch (err) { /* fiche corrompue, on ignore */ }
             return;
         }
