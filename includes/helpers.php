@@ -589,6 +589,35 @@ function upload_label_photo(string $field = 'label_photo'): ?string
     return 'uploads/labels/' . $filename;
 }
 
+/**
+ * Copie une photo déjà enregistrée dans uploads/scan_history/ (issue d'un
+ * scan en magasin) vers uploads/labels/, pour l'associer à un vin ajouté
+ * depuis le scanner sans repasser par un upload de fichier. basename() élimine
+ * toute tentative de traversée de répertoire avant même de vérifier le contenu.
+ */
+function copy_scan_photo_to_label(string $scanRelativePath): ?string
+{
+    $basename = basename($scanRelativePath);
+    $source = __DIR__ . '/../uploads/scan_history/' . $basename;
+    if ($basename === '' || !is_file($source)) {
+        return null;
+    }
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    $mime = mime_content_type($source);
+    if (!isset($allowed[$mime])) {
+        return null;
+    }
+    $dir = __DIR__ . '/../uploads/labels/';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    $filename = bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
+    if (!copy($source, $dir . $filename)) {
+        return null;
+    }
+    return 'uploads/labels/' . $filename;
+}
+
 function wine_thumbnail_html(?string $photoPath, string $extraClass = ''): string
 {
     $class = trim('thumb ' . $extraClass);

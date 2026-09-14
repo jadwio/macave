@@ -12,9 +12,18 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.12';
+const APP_VERSION = '2.10.13';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.13',
+        'date' => '2026-09-14',
+        'title' => 'Scanner : la photo de l\'étiquette manquait aussi à l\'ajout',
+        'items' => [
+            "Suite au correctif de la v2.10.12 : la photo prise/recadrée lors du scan n'était toujours pas reprise par « Ajouter à ma cave », il fallait la réuploader à la main. Elle est maintenant copiée automatiquement vers la fiche du vin ajouté (avec un aperçu et la possibilité de la remplacer avant d'enregistrer si besoin).",
+            "Rattrapage ponctuel : le Château Dorléac ajouté juste avant ce correctif a reçu sa photo rétroactivement.",
+        ],
+    ],
     [
         'version' => '2.10.12',
         'date' => '2026-09-14',

@@ -16,6 +16,7 @@ function scan_add_cave_params(array $h): array
     $params = ['prefill_name' => $h['wine_name']];
     if ($h['producer']) $params['prefill_producer'] = $h['producer'];
     if ($h['vintage']) $params['prefill_vintage'] = $h['vintage'];
+    if (!empty($h['photo_path'])) $params['prefill_photo'] = $h['photo_path'];
     $d = $h['details_json'] ? json_decode($h['details_json'], true) : null;
     if (is_array($d)) {
         foreach (['color', 'region', 'appellation', 'country', 'classification', 'description', 'food_pairing', 'drink_from_year', 'drink_until_year'] as $k) {
@@ -482,7 +483,7 @@ require __DIR__ . '/../includes/layout_header.php';
     // Reprend tout ce que la synthèse IA a trouvé (au-delà de nom/producteur/
     // millésime) vers le formulaire d'ajout, pour ne pas faire ressaisir ce
     // qui est déjà connu (couleur, région, description, cépages...).
-    function buildAddCaveUrl(name, vintage, d) {
+    function buildAddCaveUrl(name, vintage, d, photoPath) {
         const params = new URLSearchParams({ prefill_name: name });
         if (d.producer) params.set('prefill_producer', d.producer);
         if (vintage) params.set('prefill_vintage', vintage);
@@ -499,6 +500,7 @@ require __DIR__ . '/../includes/layout_header.php';
         if (d.price_low_eur && d.price_high_eur) {
             params.set('prefill_current_estimated_price', ((d.price_low_eur + d.price_high_eur) / 2).toFixed(2));
         }
+        if (photoPath) params.set('prefill_photo', photoPath);
         return '/pages/wine_form.php?' + params.toString();
     }
 
@@ -635,7 +637,11 @@ require __DIR__ . '/../includes/layout_header.php';
         toggleSection('si-r-grapes-wrap', 'si-r-grapes', (d.grape_varieties || []).join(', '));
         toggleSection('si-r-pairing-wrap', 'si-r-pairing', d.food_pairing);
 
-        document.getElementById('si-add-link').href = buildAddCaveUrl(name, vintage, d);
+        // Un blob: (aperçu local d'un scan tout juste pris) n'existe pas encore
+        // côté serveur — seul un vrai chemin /uploads/... (fiche rouverte depuis
+        // l'historique) peut être repris tel quel comme photo à associer au vin.
+        const realPhotoPath = (photoUrl && photoUrl.indexOf('/uploads/') === 0) ? photoUrl.slice(1) : null;
+        document.getElementById('si-add-link').href = buildAddCaveUrl(name, vintage, d, realPhotoPath);
 
         document.getElementById('si-vivino-link').href = vivinoSearchUrl(name, d.producer, vintage);
 
@@ -688,6 +694,11 @@ require __DIR__ . '/../includes/layout_header.php';
                 if (json.entry.photo_path && nameEl && nameEl.textContent.startsWith(name)) {
                     photoEl.src = '/' + json.entry.photo_path;
                     photoEl.style.display = 'block';
+                    // La photo n'existait pas encore côté serveur quand displayResult()
+                    // a construit ce lien (juste un aperçu blob: local) : on le refait
+                    // maintenant avec le chemin définitif recadré.
+                    const addLink = document.getElementById('si-add-link');
+                    if (addLink) addLink.href = buildAddCaveUrl(name, vintage, d, json.entry.photo_path);
                 }
             }
         } catch (err) { /* l'historique est un bonus, jamais bloquant pour l'analyse */ }
@@ -767,7 +778,7 @@ require __DIR__ . '/../includes/layout_header.php';
         add.className = 'btn btn-sm btn-accent';
         let addUrl = null;
         if (entry.details_json) {
-            try { addUrl = buildAddCaveUrl(entry.wine_name, entry.vintage || '', JSON.parse(entry.details_json)); } catch (e) { /* fiche corrompue, repli ci-dessous */ }
+            try { addUrl = buildAddCaveUrl(entry.wine_name, entry.vintage || '', JSON.parse(entry.details_json), entry.photo_path || null); } catch (e) { /* fiche corrompue, repli ci-dessous */ }
         }
         if (!addUrl) {
             const addParams = new URLSearchParams({ prefill_name: entry.wine_name });

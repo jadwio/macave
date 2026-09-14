@@ -36,6 +36,7 @@ if ($id) {
         'drink_from_year' => !empty($_GET['prefill_drink_from_year']) ? (int) $_GET['prefill_drink_from_year'] : null,
         'drink_until_year' => !empty($_GET['prefill_drink_until_year']) ? (int) $_GET['prefill_drink_until_year'] : null,
         'current_estimated_price' => !empty($_GET['prefill_current_estimated_price']) ? (float) $_GET['prefill_current_estimated_price'] : null,
+        'label_photo_path' => $_GET['prefill_photo'] ?? null,
     ];
     $grapeNames = $_GET['prefill_grape_varieties'] ?? '';
 }
@@ -195,6 +196,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Déjà recadrée (ou volontairement laissée entière) côté navigateur par
             // l'outil de recadrage, avant même que ce fichier n'arrive ici.
             $photoPath = upload_label_photo();
+            if (!$photoPath && !empty($_POST['prefill_photo'])) {
+                // Vin ajouté depuis le scanner sans remplacer la photo proposée :
+                // reprend celle déjà prise/recadrée lors du scan.
+                $photoPath = copy_scan_photo_to_label($_POST['prefill_photo']);
+            }
         }
 
         if (!$id && empty($_POST['confirm_duplicate'])) {
@@ -284,6 +290,13 @@ require __DIR__ . '/../includes/layout_header.php';
             </div>
             <input type="file" id="label_photo" name="label_photo" accept="image/png,image/jpeg,image/webp" style="display:none;">
             <div id="photo-filename" class="ai-status"></div>
+            <?php if (!empty($wine['label_photo_path'])): ?>
+                <div style="margin-top:0.6rem;">
+                    <img src="/<?= e($wine['label_photo_path']) ?>" class="label-photo label-photo-sm">
+                    <p style="color:var(--text-muted); font-size:0.82rem; margin:0.3rem 0 0;">Photo reprise du scan — choisis-en une autre ci-dessus pour la remplacer.</p>
+                    <input type="hidden" name="prefill_photo" value="<?= e($wine['label_photo_path']) ?>">
+                </div>
+            <?php endif; ?>
         </div>
         <div class="form-row">
             <button type="button" id="btn-ai-photo" class="btn btn-accent">Analyser la photo</button>
