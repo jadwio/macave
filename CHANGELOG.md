@@ -10,6 +10,19 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.12] — 2026-09-14 — Scanner : « Ajouter à ma cave » ne perdait presque toutes les infos
+
+- Depuis la fiche de synthèse du scanner (ou depuis l'historique), cliquer
+  sur « Ajouter à ma cave » ne reprenait que le nom, le producteur et le
+  millésime — tout le reste (couleur, région, appellation, pays,
+  description, accords mets-vin, fenêtre de dégustation, cépages, prix
+  indicatif) était perdu et à ressaisir à la main dans le formulaire
+  d'ajout.
+- Corrigé : le formulaire d'ajout est maintenant pré-rempli avec tout ce
+  que la synthèse IA avait déjà trouvé. Vérifié sur un vrai scan (Château
+  Dorléac) : les 12 champs (couleur incluse) et les 3 cépages passent bien
+  du scanner au formulaire.
+
 ## [2.10.11] — 2026-09-14 — Journal des versions : mise à jour éditoriale
 
 - Quelques entrées de ce journal ont été reformulées pour rester générales

@@ -8,6 +8,29 @@ $db = get_db();
 $scanHistory = get_scan_history($db, 40);
 $SCAN_TYPE_LABELS = ['photo' => 'Photo', 'barcode' => 'Code-barres', 'qr' => 'QR code', 'name' => 'Recherche'];
 
+// Paramètres de pré-remplissage vers wine_form.php : au-delà de nom/producteur/
+// millésime, on reprend tout ce que la synthèse IA avait déjà trouvé (couleur,
+// région, description...) pour ne pas faire ressaisir ce qui est déjà connu.
+function scan_add_cave_params(array $h): array
+{
+    $params = ['prefill_name' => $h['wine_name']];
+    if ($h['producer']) $params['prefill_producer'] = $h['producer'];
+    if ($h['vintage']) $params['prefill_vintage'] = $h['vintage'];
+    $d = $h['details_json'] ? json_decode($h['details_json'], true) : null;
+    if (is_array($d)) {
+        foreach (['color', 'region', 'appellation', 'country', 'classification', 'description', 'food_pairing', 'drink_from_year', 'drink_until_year'] as $k) {
+            if (!empty($d[$k])) $params['prefill_' . $k] = $d[$k];
+        }
+        if (!empty($d['grape_varieties']) && is_array($d['grape_varieties'])) {
+            $params['prefill_grape_varieties'] = implode(', ', $d['grape_varieties']);
+        }
+        if (!empty($d['price_low_eur']) && !empty($d['price_high_eur'])) {
+            $params['prefill_current_estimated_price'] = round(((float) $d['price_low_eur'] + (float) $d['price_high_eur']) / 2, 2);
+        }
+    }
+    return $params;
+}
+
 $pageTitle = 'Scanner un vin';
 $activeNav = 'scan';
 require __DIR__ . '/../includes/layout_header.php';
@@ -170,11 +193,7 @@ require __DIR__ . '/../includes/layout_header.php';
                 ($h['price_low'] && $h['price_high']) ? format_price((float) $h['price_low']) . ' – ' . format_price((float) $h['price_high']) : null,
             ]);
             ?>
-            <?php
-            $addParams = ['prefill_name' => $h['wine_name']];
-            if ($h['producer']) $addParams['prefill_producer'] = $h['producer'];
-            if ($h['vintage']) $addParams['prefill_vintage'] = $h['vintage'];
-            ?>
+            <?php $addParams = scan_add_cave_params($h); ?>
             <div class="scan-history-item" data-id="<?= (int) $h['id'] ?>">
                 <?= wine_thumbnail_html($h['photo_path'] ?? null) ?>
                 <div class="scan-history-info">
@@ -460,6 +479,29 @@ require __DIR__ . '/../includes/layout_header.php';
         return 'https://www.vivino.com/search/wines?q=' + encodeURIComponent(parts.join(' ').trim());
     }
 
+    // Reprend tout ce que la synthèse IA a trouvé (au-delà de nom/producteur/
+    // millésime) vers le formulaire d'ajout, pour ne pas faire ressaisir ce
+    // qui est déjà connu (couleur, région, description, cépages...).
+    function buildAddCaveUrl(name, vintage, d) {
+        const params = new URLSearchParams({ prefill_name: name });
+        if (d.producer) params.set('prefill_producer', d.producer);
+        if (vintage) params.set('prefill_vintage', vintage);
+        if (d.color) params.set('prefill_color', d.color);
+        if (d.region) params.set('prefill_region', d.region);
+        if (d.appellation) params.set('prefill_appellation', d.appellation);
+        if (d.country) params.set('prefill_country', d.country);
+        if (d.classification) params.set('prefill_classification', d.classification);
+        if (d.description) params.set('prefill_description', d.description);
+        if (d.food_pairing) params.set('prefill_food_pairing', d.food_pairing);
+        if (d.drink_from_year) params.set('prefill_drink_from_year', d.drink_from_year);
+        if (d.drink_until_year) params.set('prefill_drink_until_year', d.drink_until_year);
+        if (d.grape_varieties && d.grape_varieties.length) params.set('prefill_grape_varieties', d.grape_varieties.join(', '));
+        if (d.price_low_eur && d.price_high_eur) {
+            params.set('prefill_current_estimated_price', ((d.price_low_eur + d.price_high_eur) / 2).toFixed(2));
+        }
+        return '/pages/wine_form.php?' + params.toString();
+    }
+
     async function analyze() {
         const name = document.getElementById('si-name').value.trim();
         const vintage = document.getElementById('si-vintage').value.trim();
@@ -593,10 +635,7 @@ require __DIR__ . '/../includes/layout_header.php';
         toggleSection('si-r-grapes-wrap', 'si-r-grapes', (d.grape_varieties || []).join(', '));
         toggleSection('si-r-pairing-wrap', 'si-r-pairing', d.food_pairing);
 
-        const params = new URLSearchParams({ prefill_name: name });
-        if (d.producer) params.set('prefill_producer', d.producer);
-        if (vintage) params.set('prefill_vintage', vintage);
-        document.getElementById('si-add-link').href = '/pages/wine_form.php?' + params.toString();
+        document.getElementById('si-add-link').href = buildAddCaveUrl(name, vintage, d);
 
         document.getElementById('si-vivino-link').href = vivinoSearchUrl(name, d.producer, vintage);
 
@@ -724,12 +763,19 @@ require __DIR__ . '/../includes/layout_header.php';
             actions.appendChild(view);
         }
 
-        const addParams = new URLSearchParams({ prefill_name: entry.wine_name });
-        if (entry.producer) addParams.set('prefill_producer', entry.producer);
-        if (entry.vintage) addParams.set('prefill_vintage', entry.vintage);
         const add = document.createElement('a');
         add.className = 'btn btn-sm btn-accent';
-        add.href = '/pages/wine_form.php?' + addParams.toString();
+        let addUrl = null;
+        if (entry.details_json) {
+            try { addUrl = buildAddCaveUrl(entry.wine_name, entry.vintage || '', JSON.parse(entry.details_json)); } catch (e) { /* fiche corrompue, repli ci-dessous */ }
+        }
+        if (!addUrl) {
+            const addParams = new URLSearchParams({ prefill_name: entry.wine_name });
+            if (entry.producer) addParams.set('prefill_producer', entry.producer);
+            if (entry.vintage) addParams.set('prefill_vintage', entry.vintage);
+            addUrl = '/pages/wine_form.php?' + addParams.toString();
+        }
+        add.href = addUrl;
         add.textContent = 'Ajouter à ma cave';
         actions.appendChild(add);
 

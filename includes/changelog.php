@@ -12,9 +12,18 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.11';
+const APP_VERSION = '2.10.12';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.12',
+        'date' => '2026-09-14',
+        'title' => 'Scanner : « Ajouter à ma cave » ne perdait presque toutes les infos',
+        'items' => [
+            "Depuis la fiche de synthèse du scanner (ou depuis l'historique), cliquer sur « Ajouter à ma cave » ne reprenait que le nom, le producteur et le millésime — tout le reste (couleur, région, appellation, pays, description, accords mets-vin, fenêtre de dégustation, cépages, prix indicatif) était perdu et à ressaisir à la main dans le formulaire d'ajout.",
+            "Corrigé : le formulaire d'ajout est maintenant pré-rempli avec tout ce que la synthèse IA avait déjà trouvé. Vérifié sur un vrai scan (Château Dorléac) : les 12 champs (couleur incluse) et les 3 cépages passent bien du scanner au formulaire.",
+        ],
+    ],
     [
         'version' => '2.10.11',
         'date' => '2026-09-14',

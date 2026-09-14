@@ -20,12 +20,24 @@ if ($id) {
     $stmt->execute([$id]);
     $grapeNames = implode(', ', $stmt->fetchAll(PDO::FETCH_COLUMN));
 } elseif (!empty($_GET['prefill_name'])) {
-    // Pré-remplissage depuis le mode magasin (page Scanner)
+    // Pré-remplissage depuis le mode magasin (page Scanner) : reprend tout ce
+    // que la synthèse IA avait déjà trouvé, pas seulement nom/producteur/millésime.
     $wine = [
         'name' => $_GET['prefill_name'],
         'producer' => $_GET['prefill_producer'] ?? null,
         'vintage' => !empty($_GET['prefill_vintage']) ? (int) $_GET['prefill_vintage'] : null,
+        'color' => $_GET['prefill_color'] ?? null,
+        'region' => $_GET['prefill_region'] ?? null,
+        'appellation' => $_GET['prefill_appellation'] ?? null,
+        'country' => $_GET['prefill_country'] ?? null,
+        'classification' => $_GET['prefill_classification'] ?? null,
+        'description' => $_GET['prefill_description'] ?? null,
+        'food_pairing' => $_GET['prefill_food_pairing'] ?? null,
+        'drink_from_year' => !empty($_GET['prefill_drink_from_year']) ? (int) $_GET['prefill_drink_from_year'] : null,
+        'drink_until_year' => !empty($_GET['prefill_drink_until_year']) ? (int) $_GET['prefill_drink_until_year'] : null,
+        'current_estimated_price' => !empty($_GET['prefill_current_estimated_price']) ? (float) $_GET['prefill_current_estimated_price'] : null,
     ];
+    $grapeNames = $_GET['prefill_grape_varieties'] ?? '';
 }
 
 $locations = all_locations_for_select($db);
