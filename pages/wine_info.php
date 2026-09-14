@@ -31,5 +31,7 @@ if ($name === '') {
 
 $producer = trim($input['producer'] ?? '') ?: null;
 $vintage = trim((string) ($input['vintage'] ?? '')) ?: null;
+$appellation = trim($input['appellation'] ?? '') ?: null;
+$region = trim($input['region'] ?? '') ?: null;
 
-echo json_encode(wine_info_summary($name, $producer, $vintage));
+echo json_encode(wine_info_summary($name, $producer, $vintage, $appellation, $region));

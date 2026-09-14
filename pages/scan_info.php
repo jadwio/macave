@@ -213,6 +213,10 @@ require __DIR__ . '/../includes/layout_header.php';
     let scanning = false;
     let detector = null;
     let lastProducer = '';
+    // Contexte du dernier vin identifié (ex. par photo) : réutilisé si l'utilisateur
+    // relance une recherche sur ce même nom, pour éviter qu'une recherche par nom
+    // seul (ambigu) ne dérive vers un autre vin homonyme non lié à cette bouteille.
+    let lastContext = null; // { name, appellation, region }
     let currentScanType = 'name';
     let currentBarcode = null; // rempli uniquement quand l'identification part d'un scan EAN
     // Erreurs qui valent la peine d'être rejouées automatiquement : délai réseau,
@@ -454,6 +458,10 @@ require __DIR__ . '/../includes/layout_header.php';
         }
         document.getElementById('si-result').style.display = 'none';
 
+        // Contexte du dernier résultat affiché, seulement s'il portait sur ce
+        // même nom : évite de contaminer une recherche sur un vin différent.
+        const context = (lastContext && lastContext.name.trim().toLowerCase() === name.toLowerCase()) ? lastContext : null;
+
         const maxTries = 3;
         const prog = window.aiProgress ? window.aiProgress(statusEl) : null;
         for (let attempt = 1; attempt <= maxTries; attempt++) {
@@ -464,7 +472,11 @@ require __DIR__ . '/../includes/layout_header.php';
                 const res = await fetch('/pages/wine_info.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-                    body: JSON.stringify({ name: name, producer: lastProducer, vintage: vintage }),
+                    body: JSON.stringify({
+                        name: name, producer: lastProducer, vintage: vintage,
+                        appellation: context ? context.appellation : '',
+                        region: context ? context.region : '',
+                    }),
                 });
                 const json = await res.json();
                 if (json.ok) {
@@ -497,6 +509,10 @@ require __DIR__ . '/../includes/layout_header.php';
             statusEl.textContent = 'L\'IA ne connaît pas ce vin assez précisément pour donner une synthèse fiable.';
             return;
         }
+        // Mémorisé pour une éventuelle relance de la recherche sur ce même nom
+        // (voir analyze()) : la photo, plus fiable qu'un nom seul, sert alors de
+        // garde-fou contre une dérive vers un vin homonyme différent.
+        lastContext = { name: name, appellation: d.appellation || '', region: d.region || '' };
         // Aperçu immédiat : la photo telle que prise (le fichier définitif, recadré
         // sur l'étiquette, remplacera cet aperçu une fois l'historique enregistré).
         displayResult(name, vintage, d, photoFile ? URL.createObjectURL(photoFile) : null);

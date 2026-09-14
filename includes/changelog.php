@@ -12,9 +12,19 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.0';
+const APP_VERSION = '2.10.1';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.1',
+        'date' => '2026-09-14',
+        'title' => 'Recherche par nom : éviter la dérive vers un vin homonyme',
+        'items' => [
+            "Diagnostiqué depuis le journal : trois scans du même « Tournepique » en 3 minutes avaient donné trois profils différents — la photo avait correctement lu Cahors (Malbec), mais relancer la recherche sur ce seul nom avait fait dériver l'IA vers un « Château Tournepique » bien réel mais totalement différent, en Pécharmant.",
+            "Quand une recherche par nom porte sur le même vin qu'une identification précédente plus fiable (ex. une photo), l'appellation déjà connue est désormais transmise à l'IA comme repère — elle ne part plus d'une feuille blanche et reste sur le bon vin. Reproduit et vérifié : sans ce repère l'IA dérivait vers Pécharmant, avec elle reste sur Cahors.",
+            "Les écarts de prix et de potentiel de garde d'un appel à l'autre, eux, resteront possibles sur un vin peu documenté : ce sont des estimations généralistes de l'IA, pas une donnée réelle — c'est justement pour ça que la recherche de prix réel (Open Food Facts) existe.",
+        ],
+    ],
     [
         'version' => '2.10.0',
         'date' => '2026-09-14',

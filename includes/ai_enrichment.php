@@ -521,8 +521,14 @@ function enrich_wine_from_text(string $name, ?string $producer, ?string $vintage
 /**
  * Synthèse complète "avant achat" d'un vin (mode magasin) : description, prix
  * indicatif, potentiel de garde, cépages, accords. Rien n'est enregistré en cave.
+ *
+ * $appellation/$region : à renseigner quand ils viennent d'une identification
+ * plus fiable que le nom seul (ex. lu sur la photo de l'étiquette juste avant).
+ * Un nom de vin seul est souvent ambigu — Gemini peut alors dériver vers un
+ * tout autre domaine du même nom (vu en pratique : "Tournepique" en Cahors sur
+ * la photo, "Château Tournepique" en Pécharmant en recherche par nom seule).
  */
-function wine_info_summary(string $name, ?string $producer, ?string $vintage): array
+function wine_info_summary(string $name, ?string $producer, ?string $vintage, ?string $appellation = null, ?string $region = null): array
 {
     $currentYear = date('Y');
     $prompt = "Tu es un sommelier expert qui conseille un client dans un magasin de vin, devant la bouteille. "
@@ -530,6 +536,9 @@ function wine_info_summary(string $name, ?string $producer, ?string $vintage): a
         . "Nom du vin: {$name}\n"
         . ($producer ? "Producteur/domaine: {$producer}\n" : '')
         . ($vintage ? "Millésime: {$vintage}\n" : '')
+        . ($appellation ? "Appellation déjà identifiée avec certitude (lue sur la photo de l'étiquette) : {$appellation}. "
+            . "Le nom seul étant ambigu, base-toi impérativement sur cette appellation plutôt que sur un autre vin homonyme.\n" : '')
+        . ($region ? "Région déjà identifiée : {$region}\n" : '')
         . "Nous sommes en {$currentYear}.\n"
         . "- found: true si tu connais ce vin ou peux l'évaluer par son appellation/région, false si tu ne peux rien en dire de fiable.\n"
         . "- description: synthèse de dégustation (arômes, bouche, style), 3-4 phrases.\n"
