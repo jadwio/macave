@@ -12,9 +12,18 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.4';
+const APP_VERSION = '2.10.5';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.5',
+        'date' => '2026-09-14',
+        'title' => '« À boire bientôt » n\'est plus mélangé à « maintenant »',
+        'items' => [
+            "Correction de la v2.10.4 : « à boire bientôt » n'a rien à faire dans « à boire maintenant » — ce n'est justement pas encore le moment. « À boire maintenant » ne regroupe plus que apogée + apogée dépassée.",
+            "« À boire bientôt » reste totalement à part, sans aucun chevauchement (vérifié).",
+        ],
+    ],
     [
         'version' => '2.10.4',
         'date' => '2026-09-14',

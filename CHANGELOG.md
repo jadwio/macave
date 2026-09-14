@@ -10,6 +10,14 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.5] — 2026-09-14 — « À boire bientôt » n'est plus mélangé à « maintenant »
+
+- Correction de la v2.10.4 : « à boire bientôt » n'a rien à faire dans « à
+  boire maintenant » — ce n'est justement pas encore le moment. « À boire
+  maintenant » ne regroupe plus que apogée + apogée dépassée.
+- « À boire bientôt » reste totalement à part, sans aucun chevauchement
+  (vérifié).
+
 ## [2.10.4] — 2026-09-14 — « À boire maintenant » redéfini : fenêtre en cours ou dépassée
 
 - Précision apportée sur les définitions : « à son apogée » reste le vin au

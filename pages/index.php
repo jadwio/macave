@@ -21,10 +21,9 @@ $totalValuation = 0.0;
 $distinctWines = count($wines);
 
 // À son apogée : le vin à boire pour profiter au maximum de sa qualité
-// gustative (statut 'ready' seul). À boire maintenant : tout vin déjà dans sa
-// fenêtre de dégustation ou l'ayant dépassée — 'ready' + 'drink_soon' + 'past'
-// réunis, un vin apogée dépassée restant tout à fait buvable, juste plus en
-// attente. 'past' est aussi gardé à part pour le compte "À surveiller".
+// gustative (statut 'ready' seul). À boire maintenant : apogée + apogée
+// dépassée réunies — un vin apogée dépassée reste tout à fait buvable, juste
+// en retard. « Bientôt » reste distinct : ce n'est pas encore le moment.
 $readyWines = [];
 $soonWines = [];
 $pastWines = [];
@@ -43,7 +42,6 @@ foreach ($wines as $w) {
             $nowWines[] = $w;
         } elseif ($status['status'] === 'drink_soon') {
             $soonWines[] = $w;
-            $nowWines[] = $w;
         } elseif ($status['status'] === 'past') {
             $pastWines[] = $w;
             $nowWines[] = $w;
