@@ -10,6 +10,23 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.0] — 2026-09-14 — Recadrage d'étiquette : suggestion ajustable ou entièrement manuel
+
+- Le recadrage automatique et silencieux de l'étiquette (qui pouvait mal
+  tomber, comme sur le Château d'Avrillé) est remplacé par un outil de
+  recadrage interactif : à chaque photo choisie (ajout d'un vin,
+  modification, remplacement depuis la fiche), un cadre s'affiche sur
+  l'image — pré-positionné par l'IA quand elle trouve l'étiquette — et se
+  déplace ou se redimensionne au doigt ou à la souris avant de valider.
+- « Utiliser la photo entière » reste possible en un clic, pour ne pas
+  recadrer du tout.
+- Le recadrage se fait entièrement dans le navigateur : aucune photo n'est
+  envoyée au serveur avant validation, seule la suggestion de cadrage l'est
+  (sur une version réduite, sans jamais être enregistrée).
+- Le recadrage automatique et silencieux est conservé uniquement pour le
+  scanner en magasin, où la rapidité prime et la photo n'est qu'un
+  aide-mémoire secondaire.
+
 ## [2.9.3] — 2026-09-14 — Remplacer la photo d'étiquette d'un vin déjà en cave
 
 - Corrigé : une fois qu'un vin avait une photo d'étiquette (même ratée, par

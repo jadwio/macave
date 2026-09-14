@@ -55,15 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Envoi manuel d'une étiquette depuis la galerie ou l'ordinateur
+    // Envoi manuel d'une étiquette depuis la galerie ou l'ordinateur : le
+    // fichier reçu ici est déjà celui validé dans l'outil de recadrage
+    // (recadré ou volontairement laissé entier), rien à refaire côté serveur.
     if ($action === 'upload_label') {
         $path = upload_label_photo();
         if (!$path) {
             $error = 'Fichier invalide : choisis une image JPEG, PNG ou WebP de 8 Mo maximum.';
         } else {
-            if (!empty($_POST['auto_crop'])) {
-                crop_label_to_bottle(__DIR__ . '/../' . $path);
-            }
             $db->prepare('UPDATE wines SET label_photo_path = ? WHERE id = ?')->execute([$path, $id]);
             header('Location: /pages/wine_detail.php?id=' . $id . '&labelsaved=1');
             exit;
@@ -319,10 +318,6 @@ require __DIR__ . '/../includes/layout_header.php';
                         <?= icon('search', 15) ?> Chercher en ligne
                     </button>
                 </div>
-                <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.7rem; font-size:0.9rem;">
-                    <input type="checkbox" name="auto_crop" value="1" checked>
-                    Recadrer automatiquement sur l'étiquette (IA)
-                </label>
                 <div id="label-file-name" class="ai-status"></div>
             </form>
 

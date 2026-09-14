@@ -6,6 +6,200 @@
         return meta ? meta.getAttribute('content') : '';
     }
 
+    // Réduit une image avant envoi à l'IA — évite de dépasser le délai réseau
+    // sur une photo de téléphone brute. Partagé par le scanner et l'outil de
+    // recadrage d'étiquette.
+    window.downscaleImage = function (file, maxDim, quality) {
+        return new Promise(function (resolve) {
+            if (!/^image\//.test(file.type) || file.type === 'image/gif') { resolve(file); return; }
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = function () {
+                URL.revokeObjectURL(url);
+                const longEdge = Math.max(img.naturalWidth, img.naturalHeight) || maxDim;
+                const scale = Math.min(1, maxDim / longEdge);
+                if (scale === 1 && file.size < 700 * 1024) { resolve(file); return; }
+                try {
+                    const cv = document.createElement('canvas');
+                    cv.width = Math.round(img.naturalWidth * scale);
+                    cv.height = Math.round(img.naturalHeight * scale);
+                    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+                    cv.toBlob(function (blob) {
+                        resolve(blob && blob.size < file.size ? blob : file);
+                    }, 'image/jpeg', quality);
+                } catch (e) { resolve(file); }
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+            img.src = url;
+        });
+    };
+
+    // --- Outil de recadrage d'étiquette : suggestion IA ajustable à la main,
+    // ou recadrage entièrement manuel. Utilisé partout où une photo d'étiquette
+    // est choisie (ajout/édition d'un vin, remplacement depuis sa fiche).
+    // Résout avec { file, skipped } (skipped = photo entière conservée telle
+    // quelle) ou null si l'utilisateur annule la sélection.
+    window.openCropTool = function (file, csrf) {
+        return new Promise(function (resolve) {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop open';
+            backdrop.innerHTML =
+                '<div class="modal modal-lg">' +
+                '<h3>Ajuster le cadrage de l\'étiquette</h3>' +
+                '<p style="color:var(--text-muted); font-size:0.85rem;">Fais glisser le cadre ou ses coins pour ajuster, puis valide.</p>' +
+                '<div class="crop-wrap">' +
+                '<img class="crop-img" alt="">' +
+                '<div class="crop-box">' +
+                '<div class="crop-handle crop-h-nw"></div><div class="crop-handle crop-h-ne"></div>' +
+                '<div class="crop-handle crop-h-sw"></div><div class="crop-handle crop-h-se"></div>' +
+                '</div>' +
+                '<div class="crop-loading">Suggestion de cadrage en cours…</div>' +
+                '</div>' +
+                '<div class="form-row" style="margin-top:1rem; justify-content:flex-end;">' +
+                '<button type="button" class="btn btn-ghost crop-cancel">Annuler</button>' +
+                '<button type="button" class="btn crop-full">Utiliser la photo entière</button>' +
+                '<button type="button" class="btn btn-accent crop-confirm">Valider le recadrage</button>' +
+                '</div></div>';
+            document.body.appendChild(backdrop);
+
+            const img = backdrop.querySelector('.crop-img');
+            const wrap = backdrop.querySelector('.crop-wrap');
+            const box = backdrop.querySelector('.crop-box');
+            const loading = backdrop.querySelector('.crop-loading');
+            const objUrl = URL.createObjectURL(file);
+            img.src = objUrl;
+
+            let frac = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
+            let done = false;
+
+            function applyFrac() {
+                box.style.left = (frac.x * img.clientWidth) + 'px';
+                box.style.top = (frac.y * img.clientHeight) + 'px';
+                box.style.width = (frac.w * img.clientWidth) + 'px';
+                box.style.height = (frac.h * img.clientHeight) + 'px';
+            }
+
+            function cleanup(result) {
+                if (done) return;
+                done = true;
+                URL.revokeObjectURL(objUrl);
+                window.removeEventListener('resize', applyFrac);
+                backdrop.remove();
+                resolve(result);
+            }
+
+            img.onload = function () {
+                applyFrac();
+                // Suggestion IA en second plan : n'écrase pas un cadre déjà ajusté à la main.
+                (async function () {
+                    let touched = false;
+                    box.addEventListener('pointerdown', function onFirstTouch() {
+                        touched = true;
+                        box.removeEventListener('pointerdown', onFirstTouch);
+                    });
+                    try {
+                        const small = await window.downscaleImage(file, 1280, 0.8);
+                        const form = new FormData();
+                        form.append('photo', small, 'photo.jpg');
+                        const res = await fetch('/pages/detect_label_box.php', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-Token': csrf },
+                            body: form,
+                        });
+                        const json = await res.json();
+                        if (json.ok && json.box && !touched) {
+                            frac = json.box;
+                            applyFrac();
+                        }
+                    } catch (e) { /* le cadre par défaut reste utilisable */ }
+                    if (loading) loading.style.display = 'none';
+                })();
+            };
+
+            let drag = null;
+            wrap.addEventListener('pointerdown', function (e) {
+                if (e.target === box) {
+                    drag = { mode: 'move', startX: e.clientX, startY: e.clientY, orig: Object.assign({}, frac) };
+                    box.setPointerCapture(e.pointerId);
+                } else if (e.target.classList.contains('crop-handle')) {
+                    const m = e.target.className.match(/crop-h-(\w+)/);
+                    drag = { mode: m[1], startX: e.clientX, startY: e.clientY, orig: Object.assign({}, frac) };
+                    e.target.setPointerCapture(e.pointerId);
+                }
+            });
+            wrap.addEventListener('pointermove', function (e) {
+                if (!drag) return;
+                const dxF = (e.clientX - drag.startX) / img.clientWidth;
+                const dyF = (e.clientY - drag.startY) / img.clientHeight;
+                const o = drag.orig;
+                const n = Object.assign({}, o);
+                if (drag.mode === 'move') {
+                    n.x = o.x + dxF;
+                    n.y = o.y + dyF;
+                } else {
+                    if (drag.mode.includes('n')) { n.y = o.y + dyF; n.h = o.h - dyF; }
+                    if (drag.mode.includes('s')) { n.h = o.h + dyF; }
+                    if (drag.mode.includes('w')) { n.x = o.x + dxF; n.w = o.w - dxF; }
+                    if (drag.mode.includes('e')) { n.w = o.w + dxF; }
+                }
+                n.w = Math.max(0.05, n.w);
+                n.h = Math.max(0.05, n.h);
+                n.x = Math.max(0, Math.min(n.x, 1 - n.w));
+                n.y = Math.max(0, Math.min(n.y, 1 - n.h));
+                n.w = Math.min(n.w, 1 - n.x);
+                n.h = Math.min(n.h, 1 - n.y);
+                frac = n;
+                applyFrac();
+            });
+            wrap.addEventListener('pointerup', function () { drag = null; });
+            wrap.addEventListener('pointercancel', function () { drag = null; });
+            window.addEventListener('resize', applyFrac);
+
+            backdrop.querySelector('.crop-cancel').addEventListener('click', function () { cleanup(null); });
+            backdrop.querySelector('.crop-full').addEventListener('click', function () { cleanup({ file: file, skipped: true }); });
+            backdrop.querySelector('.crop-confirm').addEventListener('click', function () {
+                const nw = img.naturalWidth, nh = img.naturalHeight;
+                const sx = Math.round(frac.x * nw), sy = Math.round(frac.y * nh);
+                const sw = Math.round(frac.w * nw), sh = Math.round(frac.h * nh);
+                const cv = document.createElement('canvas');
+                cv.width = sw;
+                cv.height = sh;
+                cv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+                cv.toBlob(function (blob) {
+                    cleanup(blob ? { file: blob, skipped: false } : { file: file, skipped: true });
+                }, 'image/jpeg', 0.9);
+            });
+        });
+    };
+
+    // Ouvre l'outil de recadrage dès qu'une photo d'étiquette est choisie dans
+    // `input`, et remplace son fichier par le résultat avant que quoi que ce
+    // soit d'autre ne s'en serve (aperçu, envoi IA, soumission du formulaire).
+    function attachCropOnSelect(input, filenameEl, onDone) {
+        input.addEventListener('change', async function () {
+            const file = input.files[0];
+            if (!file) return;
+            let result;
+            try {
+                result = await window.openCropTool(file, csrfToken());
+            } catch (e) {
+                result = { file: file, skipped: true }; // dégradation propre : photo non recadrée
+            }
+            if (result === null) {
+                input.value = '';
+                if (filenameEl) filenameEl.textContent = '';
+                return;
+            }
+            try {
+                const dt = new DataTransfer();
+                dt.items.add(new File([result.file], file.name || 'label.jpg', { type: result.file.type || file.type || 'image/jpeg' }));
+                input.files = dt.files;
+            } catch (e) { /* navigateur trop ancien pour DataTransfer : on garde le fichier d'origine tel quel */ }
+            if (filenameEl) filenameEl.textContent = result.skipped ? ('Photo sélectionnée : ' + file.name) : 'Photo recadrée prête à l\'envoi.';
+            if (onDone) onDone();
+        });
+    }
+
     // --- Envoi manuel d'une étiquette depuis la fiche du vin ---
     const btnPickLabel = document.getElementById('btn-pick-label');
     const labelPhotoInputDetail = document.getElementById('label-photo-input');
@@ -13,12 +207,9 @@
         btnPickLabel.addEventListener('click', function () {
             labelPhotoInputDetail.click();
         });
-        labelPhotoInputDetail.addEventListener('change', function () {
-            const file = labelPhotoInputDetail.files[0];
-            if (!file) return;
+        attachCropOnSelect(labelPhotoInputDetail, document.getElementById('label-file-name'), function () {
             const nameEl = document.getElementById('label-file-name');
-            if (nameEl) nameEl.textContent = 'Envoi de « ' + file.name +' »...';
-            // Envoi immédiat : le fichier choisi est le seul champ attendu.
+            if (nameEl) nameEl.textContent = 'Envoi en cours...';
             document.getElementById('upload-label-form').submit();
         });
     }
@@ -720,11 +911,11 @@
             labelPhotoInput.removeAttribute('capture');
             labelPhotoInput.click();
         });
-        labelPhotoInput.addEventListener('change', function () {
-            if (photoFilename) {
-                photoFilename.textContent = labelPhotoInput.files[0] ? 'Photo sélectionnée : ' + labelPhotoInput.files[0].name : '';
-            }
-        });
+    }
+    // Ajout ET édition partagent le même champ #label_photo (jamais les deux à
+    // la fois sur une page) : le recadrage s'applique dans les deux cas.
+    if (labelPhotoInput) {
+        attachCropOnSelect(labelPhotoInput, photoFilename);
     }
 
     function markSuggested(fieldId, value) {

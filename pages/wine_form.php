@@ -177,15 +177,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         if (!$id && !empty($_POST['confirm_duplicate']) && !empty($_POST['existing_photo_path'])) {
-            // Ré-soumission après confirmation "créer quand même" : la photo a déjà été uploadée/recadrée au premier passage.
+            // Ré-soumission après confirmation "créer quand même" : la photo a déjà été uploadée au premier passage.
             $photoPath = $_POST['existing_photo_path'];
         } else {
+            // Déjà recadrée (ou volontairement laissée entière) côté navigateur par
+            // l'outil de recadrage, avant même que ce fichier n'arrive ici.
             $photoPath = upload_label_photo();
-            // À l'ajout, le recadrage suit la case à cocher du panneau IA ; en modification (pas de panneau IA), on recadre par défaut.
-            $shouldCrop = $id ? true : !empty($_POST['auto_crop_photo']);
-            if ($photoPath && $shouldCrop) {
-                crop_label_to_bottle(__DIR__ . '/../' . $photoPath);
-            }
         }
 
         if (!$id && empty($_POST['confirm_duplicate'])) {
@@ -275,10 +272,6 @@ require __DIR__ . '/../includes/layout_header.php';
             </div>
             <input type="file" id="label_photo" name="label_photo" accept="image/png,image/jpeg,image/webp" style="display:none;">
             <div id="photo-filename" class="ai-status"></div>
-        </div>
-        <div class="field" style="display:flex; align-items:center; gap:0.5rem;">
-            <input type="checkbox" id="auto_crop_photo" name="auto_crop_photo" value="1" checked style="width:auto;">
-            <label for="auto_crop_photo" style="margin:0;">Recadrer automatiquement l'étiquette (IA)</label>
         </div>
         <div class="form-row">
             <button type="button" id="btn-ai-photo" class="btn btn-accent">Analyser la photo</button>

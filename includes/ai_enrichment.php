@@ -628,33 +628,42 @@ function enrich_wine_from_photo(string $base64Image, string $mimeType): array
     return $result;
 }
 
+const LABEL_CROP_LOADERS = [
+    'image/jpeg' => 'imagecreatefromjpeg',
+    'image/png' => 'imagecreatefrompng',
+    'image/webp' => 'imagecreatefromwebp',
+];
+const LABEL_CROP_SAVERS = [
+    'image/jpeg' => 88,
+    'image/png' => 6,
+    'image/webp' => 88,
+];
+
+function label_crop_save(string $mime, $image, string $path): bool
+{
+    return match ($mime) {
+        'image/jpeg' => imagejpeg($image, $path, LABEL_CROP_SAVERS[$mime]),
+        'image/png' => imagepng($image, $path, LABEL_CROP_SAVERS[$mime]),
+        'image/webp' => imagewebp($image, $path, LABEL_CROP_SAVERS[$mime]),
+        default => false,
+    };
+}
+
 /**
- * Détecte l'étiquette sur la photo via Gemini et recadre le fichier en place.
- * Best-effort : ne fait rien (retourne false) si la détection ou le recadrage échoue,
- * la photo d'origine reste alors inchangée.
+ * Détecte la zone d'étiquette sur une photo, sans rien modifier : c'est
+ * l'aperçu de recadrage (outil manuel/assisté) qui décide ensuite d'appliquer
+ * cette suggestion, une zone ajustée par l'utilisateur, ou rien du tout.
+ *
+ * @return array{x:float,y:float,w:float,h:float}|null fractions (0..1) de
+ *         l'image, ou null si aucune étiquette clairement identifiable.
  */
-function crop_label_to_bottle(string $absolutePath): bool
+function detect_label_box(string $absolutePath): ?array
 {
     $info = @getimagesize($absolutePath);
-    if (!$info) {
-        return false;
+    if (!$info || !isset(LABEL_CROP_LOADERS[$info['mime']])) {
+        return null;
     }
-    [$width, $height] = $info;
     $mime = $info['mime'];
-
-    $loaders = [
-        'image/jpeg' => 'imagecreatefromjpeg',
-        'image/png' => 'imagecreatefrompng',
-        'image/webp' => 'imagecreatefromwebp',
-    ];
-    $savers = [
-        'image/jpeg' => fn($im, $path) => imagejpeg($im, $path, 88),
-        'image/png' => fn($im, $path) => imagepng($im, $path, 6),
-        'image/webp' => fn($im, $path) => imagewebp($im, $path, 88),
-    ];
-    if (!isset($loaders[$mime])) {
-        return false;
-    }
 
     $prompt = 'Regarde cette photo de bouteille de vin. Identifie la zone qui encadre l\'étiquette principale (façade), '
         . 'en incluant tout le texte visible (nom, millésime, appellation) sans le couper, et en excluant l\'arrière-plan '
@@ -671,7 +680,7 @@ function crop_label_to_bottle(string $absolutePath): bool
     log_ai_enrichment(null, 'photo', $prompt, $result['raw'] ?? ($result['error'] ?? null));
 
     if (!$result['ok'] || empty($result['data']['label_found']) || count($result['data']['box_2d'] ?? []) !== 4) {
-        return false;
+        return null;
     }
 
     [$ymin, $xmin, $ymax, $xmax] = $result['data']['box_2d'];
@@ -679,43 +688,66 @@ function crop_label_to_bottle(string $absolutePath): bool
     if ($xmin > $xmax) { [$xmin, $xmax] = [$xmax, $xmin]; }
     if ($ymin > $ymax) { [$ymin, $ymax] = [$ymax, $ymin]; }
 
-    $px1 = (int) round($xmin / 1000 * $width);
-    $py1 = (int) round($ymin / 1000 * $height);
-    $px2 = (int) round($xmax / 1000 * $width);
-    $py2 = (int) round($ymax / 1000 * $height);
-
     // Marge de 6% autour de la zone détectée, pour ne pas couper de texte au bord.
-    $marginX = (int) round(($px2 - $px1) * 0.06);
-    $marginY = (int) round(($py2 - $py1) * 0.06);
-    $px1 = max(0, $px1 - $marginX);
-    $py1 = max(0, $py1 - $marginY);
-    $px2 = min($width, $px2 + $marginX);
-    $py2 = min($height, $py2 + $marginY);
+    $marginX = ($xmax - $xmin) * 0.06;
+    $marginY = ($ymax - $ymin) * 0.06;
+    $xmin = max(0, $xmin - $marginX);
+    $ymin = max(0, $ymin - $marginY);
+    $xmax = min(1000, $xmax + $marginX);
+    $ymax = min(1000, $ymax + $marginY);
 
-    // Détection visiblement aberrante (zone quasi nulle ou couvrant toute la photo) : on garde la photo d'origine.
-    $cropArea = max(0, $px2 - $px1) * max(0, $py2 - $py1);
-    $imageArea = $width * $height;
-    if ($imageArea <= 0 || $cropArea / $imageArea < 0.08) {
-        return false;
+    // Détection visiblement aberrante (zone quasi nulle ou couvrant toute la photo) : rien à proposer.
+    $area = max(0, $xmax - $xmin) * max(0, $ymax - $ymin);
+    if ($area / (1000 * 1000) < 0.08) {
+        return null;
     }
 
-    $cropWidth = $px2 - $px1;
-    $cropHeight = $py2 - $py1;
+    return ['x' => $xmin / 1000, 'y' => $ymin / 1000, 'w' => ($xmax - $xmin) / 1000, 'h' => ($ymax - $ymin) / 1000];
+}
+
+/**
+ * Recadre un fichier image en place sur une zone donnée (fractions 0..1 de
+ * chaque dimension) — utilisé une fois la zone validée (par l'IA acceptée
+ * telle quelle, ajustée à la main, ou choisie entièrement à la main).
+ */
+function crop_image_to_fraction_box(string $absolutePath, float $x, float $y, float $w, float $h): bool
+{
+    $info = @getimagesize($absolutePath);
+    if (!$info || !isset(LABEL_CROP_LOADERS[$info['mime']])) {
+        return false;
+    }
+    [$width, $height] = $info;
+    $mime = $info['mime'];
+
+    $px1 = max(0, (int) round($x * $width));
+    $py1 = max(0, (int) round($y * $height));
+    $cropWidth = min($width - $px1, (int) round($w * $width));
+    $cropHeight = min($height - $py1, (int) round($h * $height));
     if ($cropWidth < 20 || $cropHeight < 20) {
         return false;
     }
 
-    $source = @$loaders[$mime]($absolutePath);
+    $loader = LABEL_CROP_LOADERS[$mime];
+    $source = @$loader($absolutePath);
     if (!$source) {
         return false;
     }
-
     $cropped = imagecrop($source, ['x' => $px1, 'y' => $py1, 'width' => $cropWidth, 'height' => $cropHeight]);
     if ($cropped === false) {
         return false;
     }
-
     // imagedestroy() est un no-op déprécié depuis PHP 8.0 (les ressources GD
     // sont des objets, libérés par le ramasse-miettes).
-    return (bool) $savers[$mime]($cropped, $absolutePath);
+    return label_crop_save($mime, $cropped, $absolutePath);
+}
+
+/**
+ * Recadrage entièrement automatique (détection + application immédiate),
+ * pour les cas sans aperçu interactif possible (étiquette trouvée en ligne).
+ * Best-effort : ne fait rien si la détection échoue, la photo reste inchangée.
+ */
+function crop_label_to_bottle(string $absolutePath): bool
+{
+    $box = detect_label_box($absolutePath);
+    return $box !== null && crop_image_to_fraction_box($absolutePath, $box['x'], $box['y'], $box['w'], $box['h']);
 }
