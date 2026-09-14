@@ -10,6 +10,16 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.9.3] — 2026-09-14 — Remplacer la photo d'étiquette d'un vin déjà en cave
+
+- Corrigé : une fois qu'un vin avait une photo d'étiquette (même ratée, par
+  exemple un mauvais recadrage automatique), il n'y avait plus aucun moyen de
+  la changer — les boutons « Choisir une image » et « Chercher en ligne »
+  n'apparaissaient que tant qu'aucune photo n'existait.
+- Ces boutons restent désormais disponibles en permanence sur la fiche d'un
+  vin, avec le libellé « Remplacer la photo de l'étiquette » quand il y en a
+  déjà une.
+
 ## [2.9.2] — 2026-09-13 — Fiche du scanner : photo affichée, faux « 0 » corrigé
 
 - Corrigé : un vin scanné sans millésime identifié affichait un « 0 »

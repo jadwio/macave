@@ -299,35 +299,36 @@ require __DIR__ . '/../includes/layout_header.php';
         </table>
         <?php if ($wine['label_photo_path']): ?>
             <img src="/<?= e($wine['label_photo_path']) ?>" class="label-photo" style="margin-top:1rem;">
-        <?php else: ?>
-            <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
-                <p style="color:var(--text-muted); font-size:0.9rem;">Aucune photo d'étiquette pour ce vin.</p>
-
-                <form method="post" enctype="multipart/form-data" id="upload-label-form">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="upload_label">
-                    <!-- accept=image/* : sur mobile, propose galerie et appareil photo -->
-                    <input type="file" name="label_photo" id="label-photo-input"
-                           accept="image/png,image/jpeg,image/webp" style="display:none;">
-                    <div class="form-row">
-                        <button type="button" id="btn-pick-label" class="btn btn-accent">
-                            <?= icon('image', 15) ?> Choisir une image
-                        </button>
-                        <button type="button" id="btn-search-label" class="btn" data-wine-id="<?= $id ?>">
-                            <?= icon('search', 15) ?> Chercher en ligne
-                        </button>
-                    </div>
-                    <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.7rem; font-size:0.9rem;">
-                        <input type="checkbox" name="auto_crop" value="1" checked>
-                        Recadrer automatiquement sur l'étiquette (IA)
-                    </label>
-                    <div id="label-file-name" class="ai-status"></div>
-                </form>
-
-                <div id="label-search-status" class="ai-status"></div>
-                <div id="label-candidates" class="label-candidates"></div>
-            </div>
         <?php endif; ?>
+        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
+            <p style="color:var(--text-muted); font-size:0.9rem;">
+                <?= $wine['label_photo_path'] ? 'Remplacer la photo de l\'étiquette :' : 'Aucune photo d\'étiquette pour ce vin.' ?>
+            </p>
+
+            <form method="post" enctype="multipart/form-data" id="upload-label-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="upload_label">
+                <!-- accept=image/* : sur mobile, propose galerie et appareil photo -->
+                <input type="file" name="label_photo" id="label-photo-input"
+                       accept="image/png,image/jpeg,image/webp" style="display:none;">
+                <div class="form-row">
+                    <button type="button" id="btn-pick-label" class="btn btn-accent">
+                        <?= icon('image', 15) ?> Choisir une image
+                    </button>
+                    <button type="button" id="btn-search-label" class="btn" data-wine-id="<?= $id ?>">
+                        <?= icon('search', 15) ?> Chercher en ligne
+                    </button>
+                </div>
+                <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.7rem; font-size:0.9rem;">
+                    <input type="checkbox" name="auto_crop" value="1" checked>
+                    Recadrer automatiquement sur l'étiquette (IA)
+                </label>
+                <div id="label-file-name" class="ai-status"></div>
+            </form>
+
+            <div id="label-search-status" class="ai-status"></div>
+            <div id="label-candidates" class="label-candidates"></div>
+        </div>
     </div>
 
     <div class="card">

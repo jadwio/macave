@@ -12,9 +12,18 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.9.2';
+const APP_VERSION = '2.9.3';
 
 const CHANGELOG = [
+    [
+        'version' => '2.9.3',
+        'date' => '2026-09-14',
+        'title' => 'Remplacer la photo d\'étiquette d\'un vin déjà en cave',
+        'items' => [
+            "Corrigé : une fois qu'un vin avait une photo d'étiquette (même ratée, par exemple un mauvais recadrage automatique), il n'y avait plus aucun moyen de la changer — les boutons « Choisir une image » et « Chercher en ligne » n'apparaissaient que tant qu'aucune photo n'existait.",
+            "Ces boutons restent désormais disponibles en permanence sur la fiche d'un vin, avec le libellé « Remplacer la photo de l'étiquette » quand il y en a déjà une.",
+        ],
+    ],
     [
         'version' => '2.9.2',
         'date' => '2026-09-13',
