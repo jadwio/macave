@@ -12,9 +12,19 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.3';
+const APP_VERSION = '2.10.4';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.4',
+        'date' => '2026-09-14',
+        'title' => '« À boire maintenant » redéfini : fenêtre en cours ou dépassée',
+        'items' => [
+            "Précision apportée sur les définitions : « à son apogée » reste le vin au sommet de sa qualité gustative, mais « à boire maintenant » doit couvrir tout vin déjà dans sa fenêtre de dégustation OU l'ayant dépassée — pas seulement les vins en retard.",
+            "L'onglet « À boire maintenant » regroupe donc désormais à son apogée + à boire bientôt + apogée dépassée, avec la colonne « Dégustation » affichée pour distinguer chaque cas au sein de cette liste. « À son apogée » et « À boire bientôt » restent des onglets à part, plus précis.",
+            "La tuile « À surveiller » du haut de page continue de ne compter que ce qui presse vraiment (à boire bientôt + apogée dépassée), sans les vins tranquillement à leur apogée.",
+        ],
+    ],
     [
         'version' => '2.10.3',
         'date' => '2026-09-14',

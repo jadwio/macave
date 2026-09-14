@@ -20,9 +20,15 @@ $totalBottles = 0;
 $totalValuation = 0.0;
 $distinctWines = count($wines);
 
+// À son apogée : le vin à boire pour profiter au maximum de sa qualité
+// gustative (statut 'ready' seul). À boire maintenant : tout vin déjà dans sa
+// fenêtre de dégustation ou l'ayant dépassée — 'ready' + 'drink_soon' + 'past'
+// réunis, un vin apogée dépassée restant tout à fait buvable, juste plus en
+// attente. 'past' est aussi gardé à part pour le compte "À surveiller".
 $readyWines = [];
-$nowWines = [];
 $soonWines = [];
+$pastWines = [];
+$nowWines = [];
 
 foreach ($wines as $w) {
     $qty = (int) $w['qty'];
@@ -34,10 +40,13 @@ foreach ($wines as $w) {
         $status = drink_status($w['drink_from_year'] !== null ? (int) $w['drink_from_year'] : null, $w['drink_until_year'] !== null ? (int) $w['drink_until_year'] : null);
         if ($status['status'] === 'ready') {
             $readyWines[] = $w;
-        } elseif ($status['status'] === 'past') {
             $nowWines[] = $w;
         } elseif ($status['status'] === 'drink_soon') {
             $soonWines[] = $w;
+            $nowWines[] = $w;
+        } elseif ($status['status'] === 'past') {
+            $pastWines[] = $w;
+            $nowWines[] = $w;
         }
     }
 }
@@ -151,14 +160,14 @@ require __DIR__ . '/../includes/layout_header.php';
         <div class="label">Valeur estimée</div>
     </div>
     <div class="card stat-tile">
-        <div class="value"><?= count($nowWines) + count($soonWines) ?></div>
+        <div class="value"><?= count($soonWines) + count($pastWines) ?></div>
         <div class="label">À surveiller</div>
     </div>
 </div>
 
 <div class="tabs">
     <button type="button" class="tab-btn active" data-tab="tab-ready">À son apogée <span class="tab-count"><?= count($readyWines) ?></span></button>
-    <button type="button" class="tab-btn" data-tab="tab-now">Apogée dépassée <span class="tab-count"><?= count($nowWines) ?></span></button>
+    <button type="button" class="tab-btn" data-tab="tab-now">À boire maintenant <span class="tab-count"><?= count($nowWines) ?></span></button>
     <button type="button" class="tab-btn" data-tab="tab-soon">À boire bientôt <span class="tab-count"><?= count($soonWines) ?></span></button>
     <button type="button" class="tab-btn" data-tab="tab-recent">Ajouts récents <span class="tab-count"><?= count($recent) ?></span></button>
     <button type="button" class="tab-btn" data-tab="tab-all">Tous les vins <span class="tab-count"><?= count($wines) ?></span></button>
@@ -169,7 +178,7 @@ require __DIR__ . '/../includes/layout_header.php';
         <?php render_wine_table($readyWines, 'Aucun vin actuellement à son apogée.'); ?>
     </div>
     <div class="tab-panel" id="tab-now">
-        <?php render_wine_table($nowWines, 'Aucun vin n\'a dépassé son apogée pour le moment.'); ?>
+        <?php render_wine_table($nowWines, 'Aucun vin à boire pour le moment.', true); ?>
     </div>
     <div class="tab-panel" id="tab-soon">
         <?php render_wine_table($soonWines, 'Aucun vin à boire bientôt pour le moment.'); ?>
