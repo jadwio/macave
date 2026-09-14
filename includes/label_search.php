@@ -246,23 +246,42 @@ function download_label_image(string $url): array
         return ['ok' => false, 'error' => 'Source d\'image non autorisée.'];
     }
 
+    // Suit les redirections nous-mêmes (FOLLOWLOCATION désactivé) pour revalider
+    // chaque saut contre LABEL_ALLOWED_HOSTS, plutôt que de laisser curl suivre
+    // aveuglément une redirection émise par l'un de ces hôtes.
+    $currentUrl = $url;
     $body = '';
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_TIMEOUT => 20,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 3,
-        CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
-        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
-        CURLOPT_USERAGENT => WR_USER_AGENT,
-        CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$body) {
-            $body .= $chunk;
-            return strlen($body) > LABEL_MAX_BYTES ? 0 : strlen($chunk);
-        },
-    ]);
-    curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    $code = 0;
+    for ($hop = 0; $hop <= 3; $hop++) {
+        $body = '';
+        $ch = curl_init($currentUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_USERAGENT => WR_USER_AGENT,
+            CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$body) {
+                $body .= $chunk;
+                return strlen($body) > LABEL_MAX_BYTES ? 0 : strlen($chunk);
+            },
+        ]);
+        curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $redirectUrl = curl_getinfo($ch, CURLINFO_REDIRECT_URL) ?: null;
+        curl_close($ch);
+
+        if ($code >= 300 && $code < 400 && $redirectUrl) {
+            $redirectHost = parse_url($redirectUrl, PHP_URL_HOST);
+            $redirectScheme = parse_url($redirectUrl, PHP_URL_SCHEME);
+            if ($redirectScheme === 'https' && in_array($redirectHost, LABEL_ALLOWED_HOSTS, true)) {
+                $currentUrl = $redirectUrl;
+                continue;
+            }
+            return ['ok' => false, 'error' => 'Source d\'image non autorisée.'];
+        }
+        break;
+    }
 
     if ($body === '' || $code >= 400) {
         return ['ok' => false, 'error' => 'Téléchargement impossible.'];

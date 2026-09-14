@@ -12,9 +12,50 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.6';
+const APP_VERSION = '2.10.11';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.11',
+        'date' => '2026-09-14',
+        'title' => 'Journal des versions : mise à jour éditoriale',
+        'items' => [
+            "Quelques entrées de ce journal ont été reformulées pour rester générales sur les questions de sécurité, sans en changer le sens.",
+        ],
+    ],
+    [
+        'version' => '2.10.10',
+        'date' => '2026-09-14',
+        'title' => 'Renforcement de sécurité (suite)',
+        'items' => [
+            "Renforcement de sécurité complémentaire. Détails non publiés ici par précaution.",
+        ],
+    ],
+    [
+        'version' => '2.10.9',
+        'date' => '2026-09-14',
+        'title' => 'Maintenance : voir le détail des logs IA et les photos orphelines',
+        'items' => [
+            "Nouvelle page pages/ai_logs.php (lien « Voir le détail » depuis Maintenance) : liste paginée de chaque appel IA avec son prompt et sa réponse brute complets (repliables), le type d'appel et le vin lié le cas échéant. Jusqu'ici seul un total agrégé était visible.",
+            "Les photos orphelines de la Maintenance s'affichent maintenant en vignettes cliquables (agrandissement inclus) plutôt qu'en simple liste de noms de fichiers — plus facile de vérifier avant de les supprimer.",
+        ],
+    ],
+    [
+        'version' => '2.10.8',
+        'date' => '2026-09-14',
+        'title' => 'Renforcements de sécurité',
+        'items' => [
+            "Plusieurs renforcements de sécurité applicatifs. Détails non publiés ici par précaution.",
+        ],
+    ],
+    [
+        'version' => '2.10.7',
+        'date' => '2026-09-14',
+        'title' => 'Outils d\'administration : suivi des connexions',
+        'items' => [
+            "Nouvel outil de suivi des connexions, réservé à l'administrateur.",
+        ],
+    ],
     [
         'version' => '2.10.6',
         'date' => '2026-09-14',

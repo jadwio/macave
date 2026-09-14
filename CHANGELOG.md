@@ -10,6 +10,35 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.11] — 2026-09-14 — Journal des versions : mise à jour éditoriale
+
+- Quelques entrées de ce journal ont été reformulées pour rester générales
+  sur les questions de sécurité, sans en changer le sens.
+
+## [2.10.10] — 2026-09-14 — Renforcement de sécurité (suite)
+
+- Renforcement de sécurité complémentaire. Détails non publiés ici par
+  précaution.
+
+## [2.10.9] — 2026-09-14 — Maintenance : voir le détail des logs IA et les photos orphelines
+
+- Nouvelle page pages/ai_logs.php (lien « Voir le détail » depuis
+  Maintenance) : liste paginée de chaque appel IA avec son prompt et sa
+  réponse brute complets (repliables), le type d'appel et le vin lié le cas
+  échéant. Jusqu'ici seul un total agrégé était visible.
+- Les photos orphelines de la Maintenance s'affichent maintenant en
+  vignettes cliquables (agrandissement inclus) plutôt qu'en simple liste de
+  noms de fichiers — plus facile de vérifier avant de les supprimer.
+
+## [2.10.8] — 2026-09-14 — Renforcements de sécurité
+
+- Plusieurs renforcements de sécurité applicatifs. Détails non publiés ici
+  par précaution.
+
+## [2.10.7] — 2026-09-14 — Outils d'administration : suivi des connexions
+
+- Nouvel outil de suivi des connexions, réservé à l'administrateur.
+
 ## [2.10.6] — 2026-09-14 — Lien Vivino sur les fiches du scanner
 
 - Un bouton « Vivino » apparaît maintenant à côté de « Ajouter à ma cave » sur

@@ -76,9 +76,12 @@ require __DIR__ . '/../includes/layout_header.php';
 
 <div class="grid grid-2 section">
     <div class="card">
-        <h2>Logs IA</h2>
+        <div class="wine-detail-header" style="margin-bottom:0;">
+            <h2>Logs IA</h2>
+            <?php if ($aiLogCount > 0): ?><a href="/pages/ai_logs.php" class="btn btn-sm btn-ghost"><?= icon('eye', 14) ?> Voir le détail</a><?php endif; ?>
+        </div>
         <p style="color:var(--text-muted);"><?= $aiLogCount ?> entrée(s) · <?= round($aiLogSize / 1024, 1) ?> Ko de texte.
-        Ces logs servent uniquement au débogage des appels Gemini : ils peuvent être vidés sans risque.</p>
+        Ces logs servent au débogage des appels Gemini (prompt + réponse brute) : ils peuvent être vidés sans risque.</p>
         <?php if ($aiLogCount > 0): ?>
         <form method="post" style="margin-top:0.8rem;">
             <?= csrf_field() ?>
@@ -93,13 +96,16 @@ require __DIR__ . '/../includes/layout_header.php';
         <?php if (!$orphans): ?>
             <p style="color:var(--text-muted);">Aucune photo orpheline : toutes les images de uploads/labels/ sont rattachées à un vin.</p>
         <?php else: ?>
-            <p style="color:var(--text-muted);"><?= count($orphans) ?> photo(s) sans vin associé · <?= round($orphanSize / 1024, 1) ?> Ko.</p>
-            <ul style="color:var(--text-muted); font-size:0.85rem; margin:0.5rem 0 0.8rem 1.2rem;">
-                <?php foreach (array_slice($orphans, 0, 10) as $o): ?>
-                    <li><?= e($o['name']) ?> (<?= round($o['size'] / 1024) ?> Ko)</li>
+            <p style="color:var(--text-muted);"><?= count($orphans) ?> photo(s) sans vin associé · <?= round($orphanSize / 1024, 1) ?> Ko. Clique une photo pour l'agrandir.</p>
+            <div style="display:flex; flex-wrap:wrap; gap:0.6rem; margin:0.6rem 0 0.8rem;">
+                <?php foreach (array_slice($orphans, 0, 24) as $o): ?>
+                    <div style="text-align:center;">
+                        <?= wine_thumbnail_html('uploads/labels/' . $o['name'], 'orphan-thumb') ?>
+                        <div style="color:var(--text-faint); font-size:0.7rem; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= e($o['name']) ?>"><?= round($o['size'] / 1024) ?> Ko</div>
+                    </div>
                 <?php endforeach; ?>
-                <?php if (count($orphans) > 10): ?><li>… et <?= count($orphans) - 10 ?> autres</li><?php endif; ?>
-            </ul>
+            </div>
+            <?php if (count($orphans) > 24): ?><p style="color:var(--text-muted); font-size:0.85rem;">… et <?= count($orphans) - 24 ?> autre(s).</p><?php endif; ?>
             <form method="post">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="delete_orphans">
@@ -110,7 +116,10 @@ require __DIR__ . '/../includes/layout_header.php';
 </div>
 
 <div class="card section">
-    <h2>IP bloquées (connexion)</h2>
+    <div class="wine-detail-header" style="margin-bottom:0;">
+        <h2>IP bloquées (connexion)</h2>
+        <a href="/pages/security_log.php" class="btn btn-sm btn-ghost"><?= icon('shield', 14) ?> Journal détaillé</a>
+    </div>
     <?php if (!$blockedIps): ?>
         <p style="color:var(--text-muted);">Aucune IP dans la liste des tentatives de connexion.</p>
     <?php else: ?>

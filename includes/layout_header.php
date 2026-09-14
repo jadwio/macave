@@ -46,7 +46,11 @@ $themeBg = COLOR_THEMES[$colorTheme]['bg'];
         </div>
         <div class="header-actions">
             <a href="/pages/wine_form.php" class="btn btn-accent"><?= icon('plus') ?> Ajouter un vin</a>
-            <a href="/pages/login.php?logout=1" class="btn btn-ghost"><?= icon('logout') ?> Déconnexion</a>
+            <form method="post" action="/pages/login.php" style="display:inline;">
+                <?= csrf_field() ?>
+                <input type="hidden" name="logout" value="1">
+                <button type="submit" class="btn btn-ghost"><?= icon('logout') ?> Déconnexion</button>
+            </form>
         </div>
     </div>
 </header>

@@ -459,6 +459,7 @@ require __DIR__ . '/../includes/layout_header.php';
             <a href="/pages/rack.php" class="btn"><?= icon('rack', 16) ?> Voir mes caves</a>
             <a href="/pages/data_cleanup.php" class="btn"><?= icon('edit', 16) ?> Cépages &amp; régions</a>
             <a href="/pages/maintenance.php" class="btn"><?= icon('settings', 16) ?> Maintenance</a>
+            <a href="/pages/security_log.php" class="btn"><?= icon('shield', 16) ?> Journal de sécurité</a>
             <a href="/pages/export.php" class="btn"><?= icon('download', 16) ?> Export CSV</a>
         </div>
     </div>

@@ -1,5 +1,12 @@
 <?php
 
+// Ne jamais dépendre du réglage par défaut de l'hébergeur : une PDOException
+// (contrainte SQL, etc.) affichée brute au visiteur fuiterait des détails
+// internes. Toujours désactivé en prod, quoi qu'il arrive côté php.ini.
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
+
 function get_db(): PDO
 {
     static $pdo = null;

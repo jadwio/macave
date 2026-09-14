@@ -46,21 +46,44 @@ function wr_empty_wine(): array
     ];
 }
 
+/**
+ * Suit les redirections nous-mêmes (au lieu de CURLOPT_FOLLOWLOCATION) pour
+ * pouvoir vérifier que chaque saut reste sur le même hôte que la requête de
+ * départ — même hôtes fixes et connus qu'on appelle (Open Food Facts,
+ * Wikipédia, Wikimedia Commons), mais on évite qu'une redirection change
+ * silencieusement de destination sans contrôle.
+ */
 function wr_http_get(string $url, int $timeout = 12): ?string
 {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => $timeout,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 3,
-        CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
-        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
-        CURLOPT_USERAGENT => WR_USER_AGENT,
-    ]);
-    $body = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    // curl_close() est un no-op déprécié depuis PHP 8.0 — la ressource se libère seule.
+    $originalHost = parse_url($url, PHP_URL_HOST);
+    $currentUrl = $url;
+    $body = false;
+    $code = 0;
+
+    for ($hop = 0; $hop <= 3; $hop++) {
+        $ch = curl_init($currentUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_USERAGENT => WR_USER_AGENT,
+        ]);
+        $body = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $redirectUrl = curl_getinfo($ch, CURLINFO_REDIRECT_URL) ?: null;
+        // curl_close() est un no-op déprécié depuis PHP 8.0 — la ressource se libère seule.
+
+        if ($code >= 300 && $code < 400 && $redirectUrl
+            && parse_url($redirectUrl, PHP_URL_SCHEME) === 'https'
+            && parse_url($redirectUrl, PHP_URL_HOST) === $originalHost) {
+            $currentUrl = $redirectUrl;
+            continue;
+        }
+        break;
+    }
+
     return ($body === false || $code >= 400) ? null : $body;
 }
 

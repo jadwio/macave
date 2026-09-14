@@ -96,6 +96,21 @@ function blacklist_ip(PDO $db, string $ip, int $seconds): void
     ]);
 }
 
+// Journal détaillé (une ligne par tentative) pour la page Journal de sécurité —
+// indépendant du compteur login_attempts ci-dessus, qui gère uniquement le
+// verrouillage. country_code : fourni gratuitement par Cloudflare via l'en-tête
+// CF-IPCountry sur chaque requête proxifiée, aucun appel réseau supplémentaire.
+function log_login_attempt(PDO $db, string $ip, string $username, string $result): void
+{
+    $country = $_SERVER['HTTP_CF_IPCOUNTRY'] ?? null;
+    if ($country !== null && strlen($country) !== 2) {
+        $country = null;
+    }
+    $db->prepare(
+        'INSERT INTO login_attempt_log (ip_address, username_tried, result, country_code) VALUES (?, ?, ?, ?)'
+    )->execute([$ip, mb_substr($username, 0, 100), $result, $country]);
+}
+
 function admin_password_hash(PDO $db): string
 {
     return get_setting($db, 'admin_password_hash') ?? ADMIN_PASSWORD_HASH;

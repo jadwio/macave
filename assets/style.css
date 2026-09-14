@@ -313,6 +313,7 @@ th, td { text-align: left; padding: 0.8rem 0.85rem; border-bottom: 1px solid var
     background: var(--bg-elevated);
 }
 .thumb-placeholder { background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card)); }
+.orphan-thumb { width: 70px; height: 70px; }
 th { color: var(--text-muted); font-weight: 600; font-size: 0.86rem; text-transform: uppercase; letter-spacing: 0.06em; }
 tr:hover td { background: rgba(255,255,255,0.02); }
 

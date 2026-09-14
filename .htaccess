@@ -13,6 +13,10 @@ Options -Indexes
 # Le dossier des sauvegardes n'est jamais servi directement (téléchargement via backup_download.php)
 RedirectMatch 403 ^/backups/
 
+# Défense en profondeur : bloque .git/ et tout fichier caché (.gitignore, .env...)
+# même si la protection actuelle vient de la plateforme/Cloudflare plutôt que d'ici.
+RedirectMatch 403 /\.
+
 # Force HTTPS (Cloudflare Flexible SSL termine le TLS avant l'origine IONOS,
 # qui ne voit jamais HTTPS directement — on se fie donc aussi à X-Forwarded-Proto
 # pour éviter une boucle de redirection infinie)

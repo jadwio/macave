@@ -6,7 +6,8 @@ require_once __DIR__ . '/../includes/helpers.php';
 
 start_secure_session();
 
-if (isset($_GET['logout'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
+    require_csrf();
     logout();
     header('Location: /pages/login.php');
     exit;
@@ -31,13 +32,16 @@ if ($lockedUntil) {
     if (!hash_equals(ADMIN_USERNAME, $username)) {
         // Identifiant différent de l'admin : signe probable de scan/bot, blocage immédiat 24h.
         blacklist_ip($db, $ip, LOGIN_BLACKLIST_SECONDS);
+        log_login_attempt($db, $ip, $username, 'fail_username');
         $error = 'Identifiants incorrects.';
     } elseif (attempt_login($db, $username, $password)) {
         clear_login_attempts($db, $ip);
+        log_login_attempt($db, $ip, $username, 'success');
         header('Location: /pages/index.php');
         exit;
     } else {
         register_failed_login($db, $ip);
+        log_login_attempt($db, $ip, $username, 'fail_password');
         $error = 'Identifiants incorrects.';
     }
 }

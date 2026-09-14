@@ -18,12 +18,23 @@ $wines = $db->query(
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="ma-cave-' . date('Y-m-d') . '.csv"');
 
+// Neutralise l'injection de formule tableur : un champ (nom de vin, producteur...)
+// pourrait en théorie commencer par =, +, - ou @ (via une donnée IA mal filtrée
+// en amont) et s'exécuter comme une formule à l'ouverture dans Excel/Sheets.
+function csv_safe(mixed $value): mixed
+{
+    if (is_string($value) && $value !== '' && strpbrk($value[0], "=+-@\t\r") !== false) {
+        return "'" . $value;
+    }
+    return $value;
+}
+
 $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF");
 fputcsv($out, ['Nom', 'Producteur', 'Couleur', 'Region', 'Appellation', 'Classification', 'Pays', 'Cepages', 'Millesime', 'Quantite', 'Emplacements', 'Boire de', 'Boire jusqua', 'Prix achat', 'Prix actuel', 'Date achat'], ';');
 
 foreach ($wines as $w) {
-    fputcsv($out, [
+    fputcsv($out, array_map('csv_safe', [
         $w['name'],
         $w['producer'],
         color_label($w['color']),
@@ -40,7 +51,7 @@ foreach ($wines as $w) {
         $w['purchase_price'],
         $w['current_estimated_price'],
         $w['purchase_date'],
-    ], ';');
+    ]), ';');
 }
 fclose($out);
 exit;

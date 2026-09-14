@@ -128,6 +128,22 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     locked_until DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Journal détaillé (une ligne par tentative de connexion, contrairement à
+-- login_attempts qui n'est qu'un compteur écrasé par IP) — sert uniquement à
+-- l'affichage du journal de sécurité, aucun rôle dans le verrouillage lui-même.
+-- country_code vient de l'en-tête CF-IPCountry fourni gratuitement par
+-- Cloudflare sur chaque requête (aucun appel à une API tierce).
+CREATE TABLE IF NOT EXISTS login_attempt_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL,
+    username_tried VARCHAR(100) NULL,
+    result ENUM('success','fail_password','fail_username') NOT NULL,
+    country_code CHAR(2) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_login_attempt_log_created (created_at),
+    INDEX idx_login_attempt_log_ip (ip_address)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS app_settings (
     setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
     setting_value TEXT NULL

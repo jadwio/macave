@@ -24,6 +24,7 @@ const ICONS = [
     'x' => '<path d="M18 6 6 18M6 6l12 12"/>',
     'gift' => '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M12 8a2.5 2.5 0 1 1-2.5-2.5C11.5 5.5 12 8 12 8ZM12 8a2.5 2.5 0 1 0 2.5-2.5C12.5 5.5 12 8 12 8Z"/>',
     'barcode' => '<path d="M3 5v14M7 5v14M10 5v10M10 18.5v.5M13 5v14M16.5 5v10M16.5 18.5v.5M21 5v14"/>',
+    'shield' => '<path d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5l-8-3Z"/>',
 ];
 
 /** Lettre d'une ligne : 1 => A, 2 => B, ... 26 => Z, puis AA, AB... */
@@ -600,6 +601,20 @@ function wine_thumbnail_html(?string $photoPath, string $extraClass = ''): strin
 function e(?string $value): string
 {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+}
+
+/** Émoji drapeau à partir d'un code pays ISO 2 lettres (ex. "FR" -> 🇫🇷). Chaîne vide si absent/invalide. */
+function country_flag(?string $code): string
+{
+    if ($code === null || !preg_match('/^[A-Za-z]{2}$/', $code)) {
+        return '';
+    }
+    $code = strtoupper($code);
+    $flag = '';
+    for ($i = 0; $i < 2; $i++) {
+        $flag .= mb_chr(0x1F1E6 + (ord($code[$i]) - 65), 'UTF-8');
+    }
+    return $flag;
 }
 
 function total_stock_for_wine(PDO $db, int $wineId): int
