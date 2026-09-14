@@ -158,7 +158,7 @@ require __DIR__ . '/../includes/layout_header.php';
 
 <div class="tabs">
     <button type="button" class="tab-btn active" data-tab="tab-ready">À son apogée <span class="tab-count"><?= count($readyWines) ?></span></button>
-    <button type="button" class="tab-btn" data-tab="tab-now">À boire maintenant <span class="tab-count"><?= count($nowWines) ?></span></button>
+    <button type="button" class="tab-btn" data-tab="tab-now">Apogée dépassée <span class="tab-count"><?= count($nowWines) ?></span></button>
     <button type="button" class="tab-btn" data-tab="tab-soon">À boire bientôt <span class="tab-count"><?= count($soonWines) ?></span></button>
     <button type="button" class="tab-btn" data-tab="tab-recent">Ajouts récents <span class="tab-count"><?= count($recent) ?></span></button>
     <button type="button" class="tab-btn" data-tab="tab-all">Tous les vins <span class="tab-count"><?= count($wines) ?></span></button>
@@ -169,7 +169,7 @@ require __DIR__ . '/../includes/layout_header.php';
         <?php render_wine_table($readyWines, 'Aucun vin actuellement à son apogée.'); ?>
     </div>
     <div class="tab-panel" id="tab-now">
-        <?php render_wine_table($nowWines, 'Aucun vin à boire en priorité pour le moment.'); ?>
+        <?php render_wine_table($nowWines, 'Aucun vin n\'a dépassé son apogée pour le moment.'); ?>
     </div>
     <div class="tab-panel" id="tab-soon">
         <?php render_wine_table($soonWines, 'Aucun vin à boire bientôt pour le moment.'); ?>

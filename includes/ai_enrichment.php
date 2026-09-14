@@ -354,6 +354,12 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
         'generationConfig' => [
             'responseMimeType' => 'application/json',
             'responseSchema' => $schema,
+            // Basse plutôt que la valeur par défaut du modèle (proche de 1) : rien
+            // ici ne doit varier "par créativité" (prix, description, détection de
+            // cadre...) — seule la vraie incertitude (peu de matière sur un vin
+            // méconnu, modèles différents selon la tâche) doit faire bouger la
+            // réponse, pas un aléa ajouté sans raison à chaque appel.
+            'temperature' => 0.2,
         ],
     ];
     $payload = json_encode($body, JSON_UNESCAPED_UNICODE);

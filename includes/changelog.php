@@ -12,9 +12,28 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.1';
+const APP_VERSION = '2.10.3';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.3',
+        'date' => '2026-09-14',
+        'title' => 'Tableau de bord : onglet mal étiqueté',
+        'items' => [
+            "L'onglet « À boire maintenant » ne contenait en réalité que les vins dont l'apogée est dépassée, jamais ceux qui y sont actuellement — ceux-là sont dans l'onglet « À son apogée », juste à côté. Le libellé induisait en erreur : le statut interne de ces vins s'appelle déjà « Apogée dépassée » partout ailleurs dans l'application (fiche du vin, colonne « Dégustation » de l'onglet Tous les vins), sauf sur cet onglet du tableau de bord.",
+            "Renommé « Apogée dépassée » pour que l'étiquette corresponde enfin à ce que l'onglet contient réellement, et aux vins qui y étaient déjà.",
+        ],
+    ],
+    [
+        'version' => '2.10.2',
+        'date' => '2026-09-14',
+        'title' => 'Réponses IA plus stables (prix, descriptions, détection de cadre)',
+        'items' => [
+            "Température des appels IA abaissée : jusqu'ici, même reposer exactement la même question au même modèle Gemini pouvait donner un prix sensiblement différent (aléa de génération, sans lien avec une vraie incertitude sur le vin).",
+            "Testé : la même recherche posée deux fois de suite donne maintenant deux fourchettes de prix quasi identiques (7-12€ puis 8-13€, contre des écarts bien plus marqués auparavant).",
+            "N'élimine pas les écarts entre modèles différents (chacun garde ses propres connaissances) ni l'incertitude réelle sur un vin peu documenté — seul le bruit ajouté sans raison à chaque appel est réduit.",
+        ],
+    ],
     [
         'version' => '2.10.1',
         'date' => '2026-09-14',
