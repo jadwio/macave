@@ -12,9 +12,18 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.5';
+const APP_VERSION = '2.10.6';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.6',
+        'date' => '2026-09-14',
+        'title' => 'Lien Vivino sur les fiches du scanner',
+        'items' => [
+            "Un bouton « Vivino » apparaît maintenant à côté de « Ajouter à ma cave » sur la fiche de synthèse du scanner magasin — que ce soit juste après une analyse ou en rouvrant une fiche depuis l'historique des scans (« Voir la fiche »). Ouvre une recherche Vivino pré-remplie avec le nom (+ producteur/millésime si connus) dans un nouvel onglet.",
+            "Simple lien de recherche, pas de récupération automatique de note ou de prix : le scrapping Vivino reste bloqué côté serveur (WAF anti-bot confirmé le 2026-09-10), ce lien ouvre juste Vivino côté navigateur pour une consultation manuelle.",
+        ],
+    ],
     [
         'version' => '2.10.5',
         'date' => '2026-09-14',

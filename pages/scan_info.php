@@ -102,6 +102,7 @@ require __DIR__ . '/../includes/layout_header.php';
             <div id="si-r-sub" style="color:var(--text-muted); font-size:0.9rem;"></div>
         </div>
         <div class="header-actions">
+            <a href="#" id="si-vivino-link" target="_blank" rel="noopener noreferrer" class="btn"><?= icon('external', 16) ?> Vivino</a>
             <a href="#" id="si-add-link" class="btn btn-accent"><?= icon('plus', 16) ?> Ajouter à ma cave</a>
         </div>
     </div>
@@ -449,6 +450,16 @@ require __DIR__ . '/../includes/layout_header.php';
 
     const COLOR_LABELS = { red: 'Rouge', white: 'Blanc', rose: 'Rosé', sparkling: 'Effervescent', sweet: 'Moelleux', fortified: 'Fortifié', other: 'Vin' };
 
+    // Miroir JS de vivino_search_url() (includes/helpers.php) : simple lien de
+    // recherche vers Vivino, pas de scrapping (voir project_macave — impasse
+    // confirmée côté serveur, WAF anti-bot).
+    function vivinoSearchUrl(name, producer, vintage) {
+        const parts = [name];
+        if (producer && producer.trim().toLowerCase() !== name.trim().toLowerCase()) parts.push(producer);
+        if (vintage) parts.push(String(vintage));
+        return 'https://www.vivino.com/search/wines?q=' + encodeURIComponent(parts.join(' ').trim());
+    }
+
     async function analyze() {
         const name = document.getElementById('si-name').value.trim();
         const vintage = document.getElementById('si-vintage').value.trim();
@@ -586,6 +597,8 @@ require __DIR__ . '/../includes/layout_header.php';
         if (d.producer) params.set('prefill_producer', d.producer);
         if (vintage) params.set('prefill_vintage', vintage);
         document.getElementById('si-add-link').href = '/pages/wine_form.php?' + params.toString();
+
+        document.getElementById('si-vivino-link').href = vivinoSearchUrl(name, d.producer, vintage);
 
         document.getElementById('si-result').style.display = 'block';
         document.getElementById('si-result').scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -10,6 +10,18 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.6] — 2026-09-14 — Lien Vivino sur les fiches du scanner
+
+- Un bouton « Vivino » apparaît maintenant à côté de « Ajouter à ma cave » sur
+  la fiche de synthèse du scanner magasin — que ce soit juste après une
+  analyse ou en rouvrant une fiche depuis l'historique des scans (« Voir la
+  fiche »). Ouvre une recherche Vivino pré-remplie avec le nom (+
+  producteur/millésime si connus) dans un nouvel onglet.
+- Simple lien de recherche, pas de récupération automatique de note ou de
+  prix : le scrapping Vivino reste bloqué côté serveur (WAF anti-bot confirmé
+  le 2026-09-10), ce lien ouvre juste Vivino côté navigateur pour une
+  consultation manuelle.
+
 ## [2.10.5] — 2026-09-14 — « À boire bientôt » n'est plus mélangé à « maintenant »
 
 - Correction de la v2.10.4 : « à boire bientôt » n'a rien à faire dans « à
