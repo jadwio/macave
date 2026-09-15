@@ -12,9 +12,18 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.13';
+const APP_VERSION = '2.10.14';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.14',
+        'date' => '2026-09-15',
+        'title' => 'IA : réinitialisation quotidienne du choix de modèle',
+        'items' => [
+            "Un modèle de secours retenu après un quota dépassé restait figé indéfiniment, même une fois le quota repris à zéro le lendemain — au lieu de reprendre le modèle le plus performant disponible.",
+            "Ajout d'une réinitialisation automatique une fois par jour (activée par défaut, désactivable dans Paramètres) qui repasse chaque tâche en « Automatique », plus un bouton « Réinitialiser maintenant » pour le faire à la demande.",
+        ],
+    ],
     [
         'version' => '2.10.13',
         'date' => '2026-09-14',

@@ -10,6 +10,16 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.14] — 2026-09-15 — IA : réinitialisation quotidienne du choix de modèle
+
+- Un modèle de secours retenu après un quota dépassé restait figé
+  indéfiniment, même une fois le quota repris à zéro le lendemain — au lieu
+  de reprendre le modèle le plus performant disponible.
+- Ajout d'une réinitialisation automatique une fois par jour (activée par
+  défaut, désactivable dans Paramètres) qui repasse chaque tâche en
+  « Automatique », plus un bouton « Réinitialiser maintenant » pour le faire
+  à la demande.
+
 ## [2.10.13] — 2026-09-14 — Scanner : la photo de l'étiquette manquait aussi à l'ajout
 
 - Suite au correctif de la v2.10.12 : la photo prise/recadrée lors du scan

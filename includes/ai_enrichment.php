@@ -97,6 +97,42 @@ function gemini_task_setting_key(string $task): string
     return $task === 'text' ? 'gemini_model' : 'gemini_model_' . $task;
 }
 
+/** Efface les modèles figés (choix manuel ou repli automatique) : les tâches
+ *  redeviennent « Automatique » et reprennent le modèle le plus performant
+ *  disponible au prochain appel. */
+function gemini_reset_task_models(): void
+{
+    $db = get_db();
+    foreach (array_keys(GEMINI_TASKS) as $t) {
+        set_setting($db, gemini_task_setting_key($t), null);
+    }
+    set_setting($db, 'gemini_last_auto_reset', date('Y-m-d'));
+}
+
+/** Case à cocher « Réinitialisation quotidienne » des Paramètres — activée par défaut. */
+function gemini_daily_reset_enabled(): bool
+{
+    return get_setting(get_db(), 'gemini_daily_reset', '1') !== '0';
+}
+
+/**
+ * Un modèle de secours retenu après une saturation (voir gemini_call) reste
+ * sinon figé indéfiniment, même une fois le quota repris à zéro le lendemain.
+ * Au premier appel de chaque jour, on oublie ce choix pour redonner sa chance
+ * au modèle le plus performant listé par Google — le vrai « automatique ».
+ */
+function gemini_maybe_daily_reset(): void
+{
+    if (!gemini_daily_reset_enabled()) {
+        return;
+    }
+    $db = get_db();
+    if (get_setting($db, 'gemini_last_auto_reset') === date('Y-m-d')) {
+        return;
+    }
+    gemini_reset_task_models();
+}
+
 /**
  * Modèle effectif de chaque tâche : les choix manuels priment, et l'attribution
  * automatique comble les tâches restantes en évitant les modèles déjà retenus
@@ -110,6 +146,7 @@ function gemini_task_models(): array
     if ($resolved !== null) {
         return $resolved;
     }
+    gemini_maybe_daily_reset();
     $db = get_db();
 
     $explicit = [];

@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($quota > 0) {
             set_setting($db, 'gemini_daily_quota', (string) $quota);
         }
+        set_setting($db, 'gemini_daily_reset', isset($_POST['gemini_daily_reset']) ? '1' : '0');
         header('Location: /pages/settings.php?saved=ai');
         exit;
     } elseif ($action === 'refresh_models') {
@@ -74,6 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             set_setting($db, $task === 'text' ? 'gemini_model' : 'gemini_model_' . $task, $modelName);
         }
         header('Location: /pages/settings.php?saved=reco');
+        exit;
+    } elseif ($action === 'reset_models_now') {
+        gemini_reset_task_models();
+        header('Location: /pages/settings.php?saved=reset_models');
         exit;
     } elseif ($action === 'backup_now') {
         $result = create_backup_zip($db);
@@ -145,6 +150,8 @@ $distinctModels = count(array_unique(gemini_task_models()));
 $aiByModel = gemini_requests_today_by_model();
 $aiUsedToday = array_sum($aiByModel);
 $aiQuota = gemini_daily_quota();
+$dailyResetEnabled = gemini_daily_reset_enabled();
+$lastAutoReset = get_setting($db, 'gemini_last_auto_reset');
 $currentCurrency = app_currency();
 $backupEmail = get_setting($db, 'backup_email');
 $backups = list_backups();
@@ -174,6 +181,8 @@ require __DIR__ . '/../includes/layout_header.php';
     <div class="alert alert-success">Liste des modèles rafraîchie depuis l'API Google.</div>
 <?php elseif ($success === 'reco'): ?>
     <div class="alert alert-success">Répartition recommandée appliquée : chaque tâche a désormais son modèle dédié.</div>
+<?php elseif ($success === 'reset_models'): ?>
+    <div class="alert alert-success">Modèles réinitialisés : chaque tâche repasse en « Automatique ».</div>
 <?php elseif ($success === 'backup'): ?>
     <div class="alert alert-success">Sauvegarde créée — télécharge-la ci-dessous.</div>
 <?php elseif ($success === 'backup_email'): ?>
@@ -373,6 +382,17 @@ require __DIR__ . '/../includes/layout_header.php';
                 soit environ <strong><?= $distinctModels * $aiQuota ?></strong> requêtes/jour au total.
             </p>
 
+            <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; margin-bottom:0.3rem;">
+                <input type="checkbox" name="gemini_daily_reset" value="1" <?= $dailyResetEnabled ? 'checked' : '' ?>>
+                Réinitialisation quotidienne : oublier chaque jour les modèles figés (choix manuel ou repli après
+                saturation) pour reprendre automatiquement le plus performant disponible
+            </label>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0; margin-bottom:1.2rem;">
+                Sans ça, un modèle de secours retenu après un quota dépassé reste actif indéfiniment, même une fois
+                le quota repris à zéro le lendemain.
+                <?= $lastAutoReset ? 'Dernière réinitialisation automatique : ' . e($lastAutoReset) . '.' : "Pas encore déclenchée." ?>
+            </p>
+
             <?php foreach (GEMINI_TASKS as $task => $info):
                 $fieldName = $task === 'text' ? 'gemini_model' : 'gemini_model_' . $task;
                 $current = $taskModels[$task];
@@ -448,6 +468,11 @@ require __DIR__ . '/../includes/layout_header.php';
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="refresh_models">
                 <button type="submit" class="btn btn-sm btn-ghost"><?= icon('search', 14) ?> Rafraîchir la liste des modèles</button>
+            </form>
+            <form method="post">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="reset_models_now">
+                <button type="submit" class="btn btn-sm btn-ghost"><?= icon('shield', 14) ?> Réinitialiser maintenant</button>
             </form>
         </div>
     </div>
