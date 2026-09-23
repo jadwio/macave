@@ -10,6 +10,15 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.17] — 2026-09-23 — Scanner magasin : rejouer l'envoi d'une photo sans la reprendre
+
+- En cas d'échec de l'analyse (délai réseau dépassé, IA trop lente) après
+  les 3 tentatives automatiques, il fallait reprendre la photo depuis le
+  début pour réessayer. La photo déjà prise (et déjà réduite) est
+  maintenant conservée : un bouton « Réessayer avec la même photo »
+  apparaît sous le message d'erreur et relance l'envoi sans repasser par
+  l'appareil photo.
+
 ## [2.10.16] — 2026-09-23 — Scanner magasin : une photo d'étiquette trop lourde pouvait faire échouer l'analyse
 
 - Signalé après un scan en magasin resté sans résultat : le journal IA a

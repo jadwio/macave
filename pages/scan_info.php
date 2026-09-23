@@ -373,6 +373,22 @@ require __DIR__ . '/../includes/layout_header.php';
         });
     });
 
+    // Conservée après un échec (timeout réseau, IA trop lente) pour pouvoir
+    // rejouer l'envoi sans que l'utilisateur reprenne la photo.
+    let lastScannedPhoto = null;
+
+    function showPhotoRetryButton() {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm';
+        btn.style.marginLeft = '0.6rem';
+        btn.textContent = 'Réessayer avec la même photo';
+        btn.addEventListener('click', function () {
+            if (lastScannedPhoto) sendPhotoForAnalysis(lastScannedPhoto);
+        });
+        statusEl.appendChild(btn);
+    }
+
     async function analyzePhoto(file) {
         stopCamera(); // le scanner code-barres et la photo ne servent pas en même temps
         currentBarcode = null; // une photo n'apporte pas de code-barres
@@ -383,7 +399,11 @@ require __DIR__ . '/../includes/layout_header.php';
         document.getElementById('si-result').style.display = 'none';
         statusEl.textContent = 'Préparation de la photo...';
         const photo = await window.downscaleImage(file, 1600, 0.82);
+        lastScannedPhoto = photo;
+        await sendPhotoForAnalysis(photo);
+    }
 
+    async function sendPhotoForAnalysis(photo) {
         const maxTries = 3;
         const prog = window.aiProgress ? window.aiProgress(statusEl) : null;
         for (let attempt = 1; attempt <= maxTries; attempt++) {
@@ -422,14 +442,16 @@ require __DIR__ . '/../includes/layout_header.php';
                 }
                 statusEl.textContent = 'Erreur IA : ' + (json.error || 'inconnue');
                 if (prog) prog.fail();
+                showPhotoRetryButton();
                 return;
             } catch (err) {
                 if (attempt < maxTries) {
                     await new Promise(function (r) { setTimeout(r, 1500); });
                     continue;
                 }
-                statusEl.textContent = 'Erreur réseau lors de l\'analyse de la photo. Réessaie dans un instant.';
+                statusEl.textContent = 'Erreur réseau lors de l\'analyse de la photo.';
                 if (prog) prog.fail();
+                showPhotoRetryButton();
                 return;
             }
         }

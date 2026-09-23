@@ -12,9 +12,17 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.16';
+const APP_VERSION = '2.10.17';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.17',
+        'date' => '2026-09-23',
+        'title' => 'Scanner magasin : rejouer l\'envoi d\'une photo sans la reprendre',
+        'items' => [
+            "En cas d'échec de l'analyse (délai réseau dépassé, IA trop lente) après les 3 tentatives automatiques, il fallait reprendre la photo depuis le début pour réessayer. La photo déjà prise (et déjà réduite) est maintenant conservée : un bouton « Réessayer avec la même photo » apparaît sous le message d'erreur et relance l'envoi sans repasser par l'appareil photo.",
+        ],
+    ],
     [
         'version' => '2.10.16',
         'date' => '2026-09-23',
