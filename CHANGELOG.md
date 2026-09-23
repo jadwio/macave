@@ -10,6 +10,14 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.15] — 2026-09-23 — Fiche vin : la photo d'étiquette pouvait faire échouer l'analyse IA
+
+- Le bouton « Analyser la photo » (ajout/édition d'un vin) envoyait la photo
+  du téléphone telle quelle, sans redimensionnement — une photo trop lourde
+  pouvait faire échouer l'analyse. Corrigé : la photo est maintenant réduite
+  côté navigateur avant envoi, comme c'était déjà le cas pour le scanner
+  magasin.
+
 ## [2.10.14] — 2026-09-15 — IA : réinitialisation quotidienne du choix de modèle
 
 - Un modèle de secours retenu après un quota dépassé restait figé

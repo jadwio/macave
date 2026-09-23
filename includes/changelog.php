@@ -12,9 +12,17 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.14';
+const APP_VERSION = '2.10.15';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.15',
+        'date' => '2026-09-23',
+        'title' => 'Fiche vin : la photo d\'étiquette pouvait faire échouer l\'analyse IA',
+        'items' => [
+            "Le bouton « Analyser la photo » (ajout/édition d'un vin) envoyait la photo du téléphone telle quelle, sans redimensionnement — une photo trop lourde pouvait faire échouer l'analyse. Corrigé : la photo est maintenant réduite côté navigateur avant envoi, comme c'était déjà le cas pour le scanner magasin.",
+        ],
+    ],
     [
         'version' => '2.10.14',
         'date' => '2026-09-15',

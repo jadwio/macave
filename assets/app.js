@@ -1003,8 +1003,9 @@
             status.textContent = 'Analyse de la photo en cours...';
             const prog = startAiProgress(status);
             try {
+                const photo = await window.downscaleImage(fileInput.files[0], 1600, 0.82);
                 const formData = new FormData();
-                formData.append('photo', fileInput.files[0]);
+                formData.append('photo', photo, 'photo.jpg');
                 const res = await fetch('/pages/ai_enrich_photo.php', {
                     method: 'POST',
                     headers: { 'X-CSRF-Token': csrfToken() },
