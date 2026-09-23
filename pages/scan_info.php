@@ -373,34 +373,6 @@ require __DIR__ . '/../includes/layout_header.php';
         });
     });
 
-    // Réduit une photo avant envoi. Une image de téléphone brute (3-6 Mo) fait
-    // souvent dépasser le délai réseau côté serveur pendant l'analyse IA :
-    // c'était la cause des scans qu'il fallait relancer plusieurs fois.
-    function downscaleImage(file, maxDim, quality) {
-        return new Promise(function (resolve) {
-            if (!/^image\//.test(file.type) || file.type === 'image/gif') { resolve(file); return; }
-            const url = URL.createObjectURL(file);
-            const img = new Image();
-            img.onload = function () {
-                URL.revokeObjectURL(url);
-                const longEdge = Math.max(img.naturalWidth, img.naturalHeight) || maxDim;
-                const scale = Math.min(1, maxDim / longEdge);
-                if (scale === 1 && file.size < 700 * 1024) { resolve(file); return; }
-                try {
-                    const cv = document.createElement('canvas');
-                    cv.width = Math.round(img.naturalWidth * scale);
-                    cv.height = Math.round(img.naturalHeight * scale);
-                    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-                    cv.toBlob(function (blob) {
-                        resolve(blob && blob.size < file.size ? blob : file);
-                    }, 'image/jpeg', quality);
-                } catch (e) { resolve(file); }
-            };
-            img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
-            img.src = url;
-        });
-    }
-
     async function analyzePhoto(file) {
         stopCamera(); // le scanner code-barres et la photo ne servent pas en même temps
         currentBarcode = null; // une photo n'apporte pas de code-barres
@@ -410,7 +382,7 @@ require __DIR__ . '/../includes/layout_header.php';
 
         document.getElementById('si-result').style.display = 'none';
         statusEl.textContent = 'Préparation de la photo...';
-        const photo = await downscaleImage(file, 1600, 0.82);
+        const photo = await window.downscaleImage(file, 1600, 0.82);
 
         const maxTries = 3;
         const prog = window.aiProgress ? window.aiProgress(statusEl) : null;

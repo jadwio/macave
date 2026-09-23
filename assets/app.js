@@ -9,25 +9,42 @@
     // Réduit une image avant envoi à l'IA — évite de dépasser le délai réseau
     // sur une photo de téléphone brute. Partagé par le scanner et l'outil de
     // recadrage d'étiquette.
-    window.downscaleImage = function (file, maxDim, quality) {
+    // Un simple redimensionnement aux dimensions ne suffit pas : le JPEG
+    // encodé par <canvas> n'a pas de sous-échantillonnage chroma (contrairement
+    // au JPEG natif d'un appareil photo) et peut rester plusieurs Mo sur une
+    // étiquette très détaillée (texte fin, reflets de verre) — d'où la baisse
+    // progressive de qualité jusqu'à passer sous maxBytes.
+    window.downscaleImage = function (file, maxDim, quality, maxBytes) {
+        maxBytes = maxBytes || 1.5 * 1024 * 1024;
         return new Promise(function (resolve) {
             if (!/^image\//.test(file.type) || file.type === 'image/gif') { resolve(file); return; }
             const url = URL.createObjectURL(file);
             const img = new Image();
             img.onload = function () {
                 URL.revokeObjectURL(url);
-                const longEdge = Math.max(img.naturalWidth, img.naturalHeight) || maxDim;
+                const longEdge = Math.max(img.naturalWidth, img.naturalHeight);
+                if (!longEdge) { resolve(file); return; }
                 const scale = Math.min(1, maxDim / longEdge);
                 if (scale === 1 && file.size < 700 * 1024) { resolve(file); return; }
+                let cv;
                 try {
-                    const cv = document.createElement('canvas');
+                    cv = document.createElement('canvas');
                     cv.width = Math.round(img.naturalWidth * scale);
                     cv.height = Math.round(img.naturalHeight * scale);
                     cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+                } catch (e) { resolve(file); return; }
+
+                function encode(q, attemptsLeft) {
                     cv.toBlob(function (blob) {
-                        resolve(blob && blob.size < file.size ? blob : file);
-                    }, 'image/jpeg', quality);
-                } catch (e) { resolve(file); }
+                        if (!blob || blob.size >= file.size) { resolve(file); return; }
+                        if (blob.size > maxBytes && attemptsLeft > 0 && q > 0.35) {
+                            encode(q - 0.15, attemptsLeft - 1);
+                            return;
+                        }
+                        resolve(blob);
+                    }, 'image/jpeg', q);
+                }
+                encode(quality, 3);
             };
             img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
             img.src = url;

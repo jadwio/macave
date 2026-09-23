@@ -10,6 +10,20 @@ ajoutée là **et** reportée ici.
 L'historique antérieur au 2026-09-10 a été reconstitué a posteriori à partir
 des échanges de développement — les dates sont approximatives mais ordonnées.
 
+## [2.10.16] — 2026-09-23 — Scanner magasin : une photo d'étiquette trop lourde pouvait faire échouer l'analyse
+
+- Signalé après un scan en magasin resté sans résultat : le journal IA a
+  montré une photo d'environ 4,4 Mo envoyée malgré le redimensionnement déjà
+  en place — le JPEG généré côté navigateur peut rester volumineux sur une
+  étiquette très détaillée (texte fin, reflets de verre), ce qui a fait
+  dépasser le délai réseau après une première saturation temporaire du
+  service IA.
+- Corrigé : la réduction de photo baisse maintenant progressivement la
+  qualité jusqu'à repasser sous un poids raisonnable, quel que soit le
+  niveau de détail de la photo. Même correctif appliqué à la fiche
+  d'ajout/édition d'un vin (v2.10.15), qui réutilise désormais ce même
+  réglage renforcé.
+
 ## [2.10.15] — 2026-09-23 — Fiche vin : la photo d'étiquette pouvait faire échouer l'analyse IA
 
 - Le bouton « Analyser la photo » (ajout/édition d'un vin) envoyait la photo

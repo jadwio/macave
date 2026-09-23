@@ -12,9 +12,18 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.15';
+const APP_VERSION = '2.10.16';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.16',
+        'date' => '2026-09-23',
+        'title' => 'Scanner magasin : une photo d\'étiquette trop lourde pouvait faire échouer l\'analyse',
+        'items' => [
+            "Signalé après un scan en magasin resté sans résultat : le journal IA a montré une photo d'environ 4,4 Mo envoyée malgré le redimensionnement déjà en place — le JPEG généré côté navigateur peut rester volumineux sur une étiquette très détaillée (texte fin, reflets de verre), ce qui a fait dépasser le délai réseau après une première saturation temporaire du service IA.",
+            "Corrigé : la réduction de photo baisse maintenant progressivement la qualité jusqu'à repasser sous un poids raisonnable, quel que soit le niveau de détail de la photo. Même correctif appliqué à la fiche d'ajout/édition d'un vin (v2.10.15), qui réutilise désormais ce même réglage renforcé.",
+        ],
+    ],
     [
         'version' => '2.10.15',
         'date' => '2026-09-23',
