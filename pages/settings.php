@@ -150,6 +150,7 @@ $distinctModels = count(array_unique(gemini_task_models()));
 $aiByModel = gemini_requests_today_by_model();
 $aiUsedToday = array_sum($aiByModel);
 $aiQuota = gemini_daily_quota();
+$modelCooldowns = gemini_model_cooldowns();
 $dailyResetEnabled = gemini_daily_reset_enabled();
 $lastAutoReset = get_setting($db, 'gemini_last_auto_reset');
 $currentCurrency = app_currency();
@@ -384,13 +385,15 @@ require __DIR__ . '/../includes/layout_header.php';
 
             <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; margin-bottom:0.3rem;">
                 <input type="checkbox" name="gemini_daily_reset" value="1" <?= $dailyResetEnabled ? 'checked' : '' ?>>
-                Réinitialisation quotidienne : oublier chaque jour les modèles figés (choix manuel ou repli après
-                saturation) pour reprendre automatiquement le plus performant disponible
+                Réinitialisation automatique : oublier les modèles figés (choix manuel ou repli après saturation),
+                une fois par jour et à chaque connexion, pour reprendre le plus performant disponible
             </label>
             <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0; margin-bottom:1.2rem;">
-                Sans ça, un modèle de secours retenu après un quota dépassé reste actif indéfiniment, même une fois
-                le quota repris à zéro le lendemain.
-                <?= $lastAutoReset ? 'Dernière réinitialisation automatique : ' . e($lastAutoReset) . '.' : "Pas encore déclenchée." ?>
+                Sans ça, un modèle de secours retenu après une saturation reste actif indéfiniment, même une fois
+                la situation redevenue normale.
+                <?= $lastAutoReset ? 'Dernière réinitialisation quotidienne : ' . e($lastAutoReset) . '.' : "Pas encore déclenchée." ?>
+                Les modèles en quarantaine (ci-dessous) ne sont eux jamais effacés par une connexion — seulement
+                par expiration ou par « Réinitialiser maintenant ».
             </p>
 
             <?php foreach (GEMINI_TASKS as $task => $info):
@@ -416,6 +419,21 @@ require __DIR__ . '/../includes/layout_header.php';
                     <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.3rem;"><?= e($info[1]) ?></p>
                 </div>
             <?php endforeach; ?>
+
+            <?php if ($modelCooldowns): ?>
+                <div class="field">
+                    <label>Modèles actuellement en surchauffe</label>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0;">
+                        Ont récemment répondu « saturé » ou « quota dépassé » — évités automatiquement par les
+                        prochains appels jusqu'à expiration, sans intervention de ta part.
+                    </p>
+                    <ul style="margin:0.3rem 0 0; padding-left:1.2rem; font-size:0.9rem;">
+                        <?php foreach ($modelCooldowns as $mName => $until): ?>
+                            <li><?= e($mName) ?> — jusqu'à <?= e(date('H:i:s', $until)) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
 
             <div class="field">
                 <label>Consommation IA du jour</label>

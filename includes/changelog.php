@@ -12,9 +12,28 @@
  * des échanges de développement ; les dates sont approximatives mais ordonnées.
  */
 
-const APP_VERSION = '2.10.17';
+const APP_VERSION = '2.10.19';
 
 const CHANGELOG = [
+    [
+        'version' => '2.10.19',
+        'date' => '2026-09-26',
+        'title' => 'IA : vérification à chaque connexion',
+        'items' => [
+            "Suite à la quarantaine automatique des modèles saturés (v2.10.18), demande explicite de vérifier que l'IA est prête dès la connexion plutôt que d'attendre un scan raté. Chaque connexion réussie rafraîchit la liste des modèles disponibles (reste sur le cache tant qu'il est valide, pas d'aller-retour réseau systématique) puis oublie les modèles figés par tâche pour repartir sur le plus performant recommandé du moment — les modèles en quarantaine restent volontairement protégés, une connexion ne doit pas annuler une mise à l'écart encore valide.",
+            "Gouverné par le même réglage que la réinitialisation quotidienne (Paramètres → Intelligence artificielle), renommé en conséquence.",
+        ],
+    ],
+    [
+        'version' => '2.10.18',
+        'date' => '2026-09-26',
+        'title' => 'IA : quarantaine automatique d\'un modèle saturé',
+        'items' => [
+            "Analyse du journal IA du 25/09 (17h38-19h07) : tous les scans photo ont échoué avec la même erreur Gemini « This model is currently experiencing high demand » (503, saturation temporaire côté Google) — rien à voir avec l'app, mais rien ne permettait non plus de s'en remettre tout seul : le scan restait bloqué jusqu'à un clic manuel sur « Réinitialiser maintenant » dans Paramètres.",
+            "Corrigé : dès qu'un modèle répond « saturé » ou « quota dépassé », il est mis de côté automatiquement pendant quelques minutes — le scan suivant (même une tâche différente, même bien plus tard) l'évite de lui-même au lieu d'y retomber à chaque tentative. Un modèle « Lite » (moins demandé) est aussi désormais systématiquement inclus dans les modèles de secours essayés. Visible dans Paramètres → Intelligence artificielle si des modèles sont actuellement de côté.",
+            "Corrigé en passant : le journal IA perdait le détail des tentatives (quels modèles essayés, dans quel ordre) dès qu'une erreur HTTP directe de Gemini était renvoyée — seul le corps brut de la toute dernière tentative restait visible, ce qui a compliqué cette analyse.",
+        ],
+    ],
     [
         'version' => '2.10.17',
         'date' => '2026-09-23',

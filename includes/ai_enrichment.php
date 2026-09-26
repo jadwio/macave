@@ -97,22 +97,50 @@ function gemini_task_setting_key(string $task): string
     return $task === 'text' ? 'gemini_model' : 'gemini_model_' . $task;
 }
 
-/** Efface les modèles figés (choix manuel ou repli automatique) : les tâches
- *  redeviennent « Automatique » et reprennent le modèle le plus performant
- *  disponible au prochain appel. */
-function gemini_reset_task_models(): void
+/** Efface uniquement les modèles figés par tâche (choix manuel ou repli
+ *  automatique), sans toucher aux quarantaines en cours (gemini_call en a
+ *  encore besoin le temps qu'un pic de forte demande passe). */
+function gemini_clear_task_pins(): void
 {
     $db = get_db();
     foreach (array_keys(GEMINI_TASKS) as $t) {
         set_setting($db, gemini_task_setting_key($t), null);
     }
-    set_setting($db, 'gemini_last_auto_reset', date('Y-m-d'));
 }
 
-/** Case à cocher « Réinitialisation quotidienne » des Paramètres — activée par défaut. */
+/** Efface les modèles figés (choix manuel ou repli automatique) : les tâches
+ *  redeviennent « Automatique » et reprennent le modèle le plus performant
+ *  disponible au prochain appel. */
+function gemini_reset_task_models(): void
+{
+    gemini_clear_task_pins();
+    set_setting(get_db(), 'gemini_last_auto_reset', date('Y-m-d'));
+    set_setting(get_db(), 'gemini_model_cooldowns', null);
+}
+
+/** Case à cocher « Réinitialisation automatique » des Paramètres — activée par défaut. */
 function gemini_daily_reset_enabled(): bool
 {
     return get_setting(get_db(), 'gemini_daily_reset', '1') !== '0';
+}
+
+/**
+ * Lancé à chaque connexion réussie (pages/login.php) : s'assure que la liste
+ * des modèles Gemini est à jour (reste sur le cache 24h tant qu'il est
+ * valide — pas d'aller-retour réseau systématique à chaque connexion) puis
+ * oublie les modèles figés par tâche, pour repartir sur le modèle recommandé
+ * du moment plutôt que d'hériter d'un choix pris pendant une précédente
+ * saturation. Les quarantaines actives ne sont volontairement pas effacées
+ * ici : un modèle qui vient tout juste d'échouer reste évité le temps
+ * qu'indiqué, se reconnecter ne doit pas annuler cette protection.
+ */
+function gemini_login_healthcheck(): void
+{
+    if (!gemini_daily_reset_enabled()) {
+        return;
+    }
+    gemini_list_models();
+    gemini_clear_task_pins();
 }
 
 /**
@@ -253,6 +281,36 @@ function gemini_daily_quota(): int
 {
     $q = (int) get_setting(get_db(), 'gemini_daily_quota', '20');
     return $q > 0 ? $q : 20;
+}
+
+/**
+ * Modèles actuellement en « quarantaine » après un 503 (saturé) ou 429 (quota) :
+ * évite de retomber dessus dans les minutes qui suivent. Avant ceci, un pic de
+ * forte demande sur un modèle donné pouvait faire échouer les 3 tentatives
+ * automatiques *et* tous les scans suivants pendant toute la durée du pic — le
+ * seul moyen de s'en sortir était une réinitialisation manuelle dans
+ * Paramètres. Stocké en réglage plutôt qu'en table dédiée : volatile et de
+ * taille négligeable (une poignée de noms de modèle).
+ *
+ * @return array<string,int> modèle => timestamp de fin de quarantaine
+ */
+function gemini_model_cooldowns(): array
+{
+    $raw = get_setting(get_db(), 'gemini_model_cooldowns');
+    $map = $raw ? json_decode($raw, true) : null;
+    if (!is_array($map)) {
+        return [];
+    }
+    $now = time();
+    return array_filter($map, fn($until) => is_int($until) && $until > $now);
+}
+
+function gemini_mark_model_cooldown(string $model, int $seconds = 240): void
+{
+    $db = get_db();
+    $map = gemini_model_cooldowns();
+    $map[$model] = time() + $seconds;
+    set_setting($db, 'gemini_model_cooldowns', json_encode($map));
 }
 
 /**
@@ -411,12 +469,35 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
     )));
 
     // Si même ces valeurs sûres sont à quota, on pioche dans le reste des
-    // modèles connus (jusqu'à 6 de plus) : le palier gratuit est compté par
+    // modèles connus (jusqu'à 8 de plus) : le palier gratuit est compté par
     // modèle, un autre peut très bien avoir encore du crédit aujourd'hui.
-    foreach (array_slice(array_keys(gemini_list_models(false, true)), 0, 6) as $extra) {
+    $knownModels = array_keys(gemini_list_models(false, true));
+    foreach (array_slice($knownModels, 0, 8) as $extra) {
         if (!in_array($extra, $fallbacks, true)) {
             $fallbacks[] = $extra;
         }
+    }
+    // Garantit un modèle « Lite » dans le lot, même s'il n'est pas dans les 8
+    // premiers de la liste triée : moins demandé, donc statistiquement moins
+    // souvent saturé qu'un Flash complet — un filet de secours différent des
+    // autres candidats plutôt qu'une simple variante du même modèle.
+    foreach ($knownModels as $c) {
+        if (str_contains($c, 'lite') && !in_array($c, $fallbacks, true)) {
+            $fallbacks[] = $c;
+            break;
+        }
+    }
+
+    // Un modèle qui vient de répondre « saturé » ailleurs (une autre tâche, un
+    // autre scan) reste en tête de liste ici tant qu'il n'a jamais été exclu :
+    // sans ceci, un pic de forte demande sur un modèle précis pouvait faire
+    // échouer TOUS les appels pendant toute la durée du pic, jusqu'à une
+    // réinitialisation manuelle dans Paramètres. On ne les retire jamais tout
+    // à fait (un candidat de plus ne coûte rien si le budget temps le permet),
+    // juste repoussés après les modèles pas encore vus en échec.
+    $cooldowns = gemini_model_cooldowns();
+    if ($cooldowns) {
+        usort($fallbacks, fn($a, $b) => (isset($cooldowns[$a]) ? 1 : 0) <=> (isset($cooldowns[$b]) ? 1 : 0));
     }
 
     // Budget total borné : l'hébergement mutualisé coupe les scripts trop longs,
@@ -457,6 +538,14 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
 
         $attempts[] = $candidate . '=' . ($response === false ? 'réseau(' . $elapsed . 's)' : $httpCode . '(' . $elapsed . 's)');
 
+        // 503/429 : on retient que ce modèle est en surchauffe pour que le
+        // PROCHAIN appel (même une tâche différente, même un tout autre scan
+        // quelques minutes plus tard) l'évite de lui-même au lieu de retomber
+        // dessus à chaque fois pendant toute la durée du pic.
+        if ($response !== false && in_array($httpCode, [503, 429], true)) {
+            gemini_mark_model_cooldown($candidate);
+        }
+
         // Rejouable : 404 (modèle indisponible pour cette clé), 503 (saturation),
         // 429 (quota épuisé pour CE modèle — le palier gratuit est compté par
         // modèle, un autre peut donc encore avoir du crédit) et échec réseau/délai
@@ -478,7 +567,13 @@ function gemini_call(array $parts, array $schema, string $task = 'text'): array
             ? ' Ce modèle n\'est pas disponible pour ta clé — change-le dans Paramètres.'
             : ($httpCode === 503 ? ' Modèle temporairement saturé, réessaie dans un instant.'
                 : ($httpCode === 429 ? ' Quota gratuit atteint sur tous les modèles essayés — réessaie demain, ou change de modèle dans Paramètres.' : ''));
-        return ['ok' => false, 'error' => 'Gemini a renvoyé une erreur (' . $httpCode . ').' . $detail . $trace, 'raw' => $response];
+        // La trace est aussi ajoutée à 'raw' : le journal IA privilégie ce
+        // champ sur 'error' quand les deux sont présents (voir
+        // wine_info_from_photo/enrich_wine_from_photo), sans quoi elle
+        // disparaissait du journal — seul le corps brut de la dernière
+        // tentative y était visible, impossible de savoir combien de modèles
+        // avaient déjà été essayés avant elle.
+        return ['ok' => false, 'error' => 'Gemini a renvoyé une erreur (' . $httpCode . ').' . $detail . $trace, 'raw' => $response . $trace];
     }
 
     // Le modèle habituel de cette tâche était indisponible (quota/saturation) et

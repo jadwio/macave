@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/ai_enrichment.php';
 
 start_secure_session();
 
@@ -37,6 +38,7 @@ if ($lockedUntil) {
     } elseif (attempt_login($db, $username, $password)) {
         clear_login_attempts($db, $ip);
         log_login_attempt($db, $ip, $username, 'success');
+        gemini_login_healthcheck();
         header('Location: /pages/index.php');
         exit;
     } else {
